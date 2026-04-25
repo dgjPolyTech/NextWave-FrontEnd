@@ -110,7 +110,7 @@ export function MainPage({ onSelectTeam, onNavigate }: MainPageProps) {
                   <DialogTrigger asChild>
                     <Button className="shadow-lg hover:shadow-xl transition-all h-12 px-6 rounded-xl font-bold">
                       <Plus className="mr-2 h-5 w-5" />
-                      새 팀 생성1
+                      새 팀 생성
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-[500px]">
