@@ -1,0 +1,223 @@
+"use client"
+
+import { useState } from "react"
+import {
+  Calendar,
+  FileText,
+  Users,
+  Bell,
+  Home,
+  ChevronDown,
+  PanelLeft,
+  Menu,
+  Sparkles
+} from "lucide-react"
+import { cn } from "@/lib/utils"
+import { PageType } from "@/hooks/use-navigation"
+import { Button } from "@/components/ui/button"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
+interface AppSidebarProps {
+  currentPage: PageType
+  onNavigate: (page: PageType) => void
+}
+
+export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
+  const [isCollapsed, setIsCollapsed] = useState(false)
+
+  const toggleSidebar = () => setIsCollapsed(!isCollapsed)
+
+  return (
+    <TooltipProvider delayDuration={0}>
+      <aside
+        className={cn(
+          "bg-sidebar text-sidebar-foreground min-h-screen flex flex-col transition-all duration-300 ease-in-out border-r border-sidebar-border relative",
+          isCollapsed ? "w-20" : "w-64"
+        )}
+      >
+        {/* Toggle Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute -right-4 top-10 h-8 w-8 rounded-full border bg-background shadow-md z-50 hover:bg-accent hidden md:flex"
+          onClick={toggleSidebar}
+        >
+          <PanelLeft className={cn("h-4 w-4 transition-transform", isCollapsed && "rotate-180")} />
+        </Button>
+
+        {/* Header */}
+        <div
+          className={cn(
+            "p-6 flex items-center gap-3 border-b border-sidebar-border overflow-hidden whitespace-nowrap cursor-pointer hover:bg-sidebar-accent transition-colors",
+            isCollapsed && "p-4 justify-center"
+          )}
+          onClick={() => onNavigate("main")}
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg">
+            <Sparkles className="h-6 w-6" />
+          </div>
+          {!isCollapsed && (
+            <div className="transition-opacity duration-300">
+              <h1 className="text-xl font-bold tracking-tight">NextWave</h1>
+              <p className="text-xs text-sidebar-foreground/70">팀 협업 플랫폼</p>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden">
+          <SidebarNavItem
+            icon={Home}
+            label="대시보드"
+            isActive={currentPage === "dashboard"}
+            onClick={() => onNavigate("dashboard")}
+            isCollapsed={isCollapsed}
+          />
+
+          <SidebarNavItem
+            icon={Calendar}
+            label="일정 관리"
+            isActive={currentPage === "schedule-view"}
+            onClick={() => onNavigate("schedule-view")}
+            isCollapsed={isCollapsed}
+          />
+
+          <SidebarCollapsibleItem
+            icon={FileText}
+            label="협업 메모"
+            isCollapsed={isCollapsed}
+            items={[
+              { label: "메모 작성", active: currentPage === "memo-write", onClick: () => onNavigate("memo-write") },
+              { label: "메모 공유", active: currentPage === "memo-share", onClick: () => onNavigate("memo-share") },
+            ]}
+          />
+
+          <SidebarCollapsibleItem
+            icon={Users}
+            label="팀 협업"
+            isCollapsed={isCollapsed}
+            items={[
+              // { label: "팀 생성", active: currentPage === "team-create", onClick: () => onNavigate("team-create") },
+              { label: "팀 초대", active: currentPage === "team-invite", onClick: () => onNavigate("team-invite") },
+              { label: "알림 설정", active: currentPage === "notification-rules", onClick: () => onNavigate("notification-rules") },
+            ]}
+          />
+        </nav>
+
+        {/* Footer */}
+        <div className={cn("p-4 border-t border-sidebar-border overflow-hidden", isCollapsed && "p-2")}>
+          <div className={cn("flex items-center gap-3", isCollapsed && "justify-center")}>
+            <div className="w-10 h-10 shrink-0 rounded-full bg-sidebar-accent flex items-center justify-center text-sidebar-foreground text-sm font-bold border-2 border-primary/20">
+              U
+            </div>
+            {!isCollapsed && (
+              <div className="min-w-0 transition-opacity duration-300">
+                <p className="text-sm font-semibold truncate">사용자</p>
+                <p className="text-xs text-sidebar-foreground/60 truncate">user@example.com</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </aside>
+    </TooltipProvider>
+  )
+}
+
+function SidebarNavItem({ icon: Icon, label, isActive, onClick, isCollapsed }: any) {
+  const content = (
+    <Button
+      variant="ghost"
+      className={cn(
+        "w-full gap-3 text-sidebar-foreground hover:bg-sidebar-accent transition-all duration-200",
+        isActive ? "bg-sidebar-accent font-medium shadow-sm" : "opacity-80 hover:opacity-100",
+        isCollapsed ? "justify-center p-0 h-10 w-10 mx-auto" : "justify-start px-3"
+      )}
+      onClick={onClick}
+    >
+      <Icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary")} />
+      {!isCollapsed && <span className="truncate">{label}</span>}
+    </Button>
+  )
+
+  if (isCollapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {content}
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          {label}
+        </TooltipContent>
+      </Tooltip>
+    )
+  }
+
+  return content
+}
+
+function SidebarCollapsibleItem({ icon: Icon, label, items, isCollapsed }: any) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  if (isCollapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            className="w-full h-10 w-10 mx-auto justify-center p-0 text-sidebar-foreground opacity-80 hover:opacity-100 hover:bg-sidebar-accent"
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            <Icon className="h-5 w-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          {label}
+        </TooltipContent>
+      </Tooltip>
+    )
+  }
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <CollapsibleTrigger asChild>
+        <Button
+          variant="ghost"
+          className="w-full justify-between text-sidebar-foreground opacity-80 hover:opacity-100 hover:bg-sidebar-accent px-3"
+        >
+          <span className="flex items-center gap-3">
+            <Icon className="h-5 w-5" />
+            <span className="truncate">{label}</span>
+          </span>
+          <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="pl-11 space-y-1 mt-1 transition-all">
+        {items.map((item: any, idx: number) => (
+          <Button
+            key={idx}
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "w-full justify-start text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors",
+              item.active && "text-sidebar-foreground font-medium bg-sidebar-accent/50"
+            )}
+            onClick={item.onClick}
+          >
+            {item.label}
+          </Button>
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
+  )
+}
+

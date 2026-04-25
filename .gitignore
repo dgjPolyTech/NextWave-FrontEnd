@@ -1,0 +1,29 @@
+# Dependency folders
+node_modules/
+.next/
+.snowflake/
+.v0-trash/
+.vercel/
+
+# Environment variables (CRITICAL)
+.env
+.env*.local
+docker/.env
+
+# API and Project Configs (민감 정보 및 자동 생성 파일)
+openapi.json
+components.json
+environment.yml
+*.log
+
+# OS & IDEs
+.DS_Store
+.vscode/
+.idea/
+
+# Exceptions (이 파일들은 꼭 올라가야 합니다)
+!package.json
+!package-lock.json
+!tsconfig.json
+!next.config.mjs
+!postcss.config.mjs

@@ -1,0 +1,32 @@
+name: nextwave
+
+services:
+  # Next.js Frontend Service (Local Development)
+  web:
+    build:
+      context: ..
+      dockerfile: dockerfile
+    ports:
+      - "3000:3000" # Next.js 기본 포트
+    environment:
+      - API_URL=${API_URL}
+    volumes:
+      - ../:/workspace # 로컬 코드를 컨테이너에 마운트하여 실시간 반영 (Hot Reloading)
+      - /workspace/node_modules # 로컬(Windows)의 node_modules가 컨테이너(Linux) 환경을 덮어쓰지 않도록 보호
+      - /workspace/.next # 호스트와 컨테이너 간의 .next 폴더 동기화로 인한 무한 재빌드 방지
+    restart: unless-stopped
+    # networks:
+    #   - app-network
+
+    # [Future] API Server Service Example
+    # api:
+    #   image: your-api-server-image
+    #   container_name: nextwave-api
+    #   ports:
+    #     - "8080:8080"
+    #   networks:
+    #     - app-network
+
+    # networks:
+    #   app-network:
+    #     driver: bridge
