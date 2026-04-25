@@ -14,8 +14,6 @@ import {
 } from "@/components/ui/dialog"
 import { TeamCreate } from "@/components/team/team-create"
 import { UserLogin } from "@/components/user/user-login"
-import { UserSignUp } from "@/components/user/user-signup"
-import { UserUpdate } from "@/components/user/user-update"
 import { useToast } from "@/components/ui/use-toast"
 import { teamService, TeamResponse } from "@/services/teamService"
 import { authService } from "@/services/authService"
@@ -28,8 +26,6 @@ interface MainPageProps {
 export function MainPage({ onSelectTeam, onNavigate }: MainPageProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
-  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
-  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false)
   const [teams, setTeams] = useState<TeamResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -121,23 +117,14 @@ export function MainPage({ onSelectTeam, onNavigate }: MainPageProps) {
                   </DialogContent>
                 </Dialog>
 
-                <Dialog open={isUpdateModalOpen} onOpenChange={setIsUpdateModalOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="shadow-lg hover:shadow-xl transition-all h-12 px-6 rounded-xl font-bold border-2"
-                    >
-                      <UserCircle className="mr-2 h-5 w-5" />
-                      내 정보 수정
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[420px]">
-                    <DialogHeader>
-                      <DialogTitle>내 정보 수정</DialogTitle>
-                    </DialogHeader>
-                    <UserUpdate onSuccess={() => setIsUpdateModalOpen(false)} />
-                  </DialogContent>
-                </Dialog>
+                <Button
+                  variant="outline"
+                  className="shadow-lg hover:shadow-xl transition-all h-12 px-6 rounded-xl font-bold border-2"
+                  onClick={() => onNavigate("user-detail")}
+                >
+                  <UserCircle className="mr-2 h-5 w-5" />
+                  내 프로필
+                </Button>
 
                 <Button
                   variant="ghost"
@@ -166,23 +153,14 @@ export function MainPage({ onSelectTeam, onNavigate }: MainPageProps) {
                   </DialogContent>
                 </Dialog>
 
-                <Dialog open={isSignupModalOpen} onOpenChange={setIsSignupModalOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="shadow-lg hover:shadow-xl transition-all h-12 px-6 rounded-xl font-bold border-2"
-                    >
-                      <Plus className="mr-2 h-5 w-5" />
-                      회원가입
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[420px]">
-                    <DialogHeader>
-                      <DialogTitle>회원가입</DialogTitle>
-                    </DialogHeader>
-                    <UserSignUp onSuccess={() => setIsSignupModalOpen(false)} />
-                  </DialogContent>
-                </Dialog>
+                <Button
+                  variant="outline"
+                  className="shadow-lg hover:shadow-xl transition-all h-12 px-6 rounded-xl font-bold border-2"
+                  onClick={() => onNavigate("user-signup")}
+                >
+                  <Plus className="mr-2 h-5 w-5" />
+                  회원가입
+                </Button>
               </>
             )}
           </div>
