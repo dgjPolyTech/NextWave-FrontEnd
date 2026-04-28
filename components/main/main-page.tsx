@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react"
 import {
   Users, Plus, ArrowRight, Sparkles, LogIn, LogOut, UserCircle,
-  Bell, Calendar, FileText, Mail, Shield, Check, X, ChevronRight, RefreshCw, Inbox, MessageSquare
+  Bell, Calendar, FileText, Mail, Shield, Check, X, ChevronRight, RefreshCw, Inbox, MessageSquare,
+  Trash2, CheckCircle2
 } from "lucide-react"
 import { Card, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -23,50 +24,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { teamService, TeamResponse } from "@/services/teamService"
 import { authService } from "@/services/authService"
 import { inboxService, AppNotificationResponse } from "@/services/inboxService"
-
-// ── 더미 알림 데이터 ──────────────────────────────────────────────
-const DUMMY_NOTIFICATIONS = [
-  {
-    id: 1,
-    type: "schedule",
-    title: "일정 알림",
-    message: "내일 오전 10시에 팀 회의가 있습니다.",
-    time: "5분 전",
-    teamName: "개발팀",
-  },
-  {
-    id: 2,
-    type: "invite",
-    title: "팀 초대",
-    message: "디자인팀에 새로운 팀원으로 초대되었습니다.",
-    time: "30분 전",
-    teamName: "디자인팀",
-  },
-  {
-    id: 3,
-    type: "memo",
-    title: "공유 메모",
-    message: "김지원님이 새로운 메모를 공유했습니다.",
-    time: "1시간 전",
-    teamName: "개발팀",
-  },
-  {
-    id: 4,
-    type: "schedule",
-    title: "일정 알림",
-    message: "금요일 스프린트 회의 시작 15분 전입니다.",
-    time: "2시간 전",
-    teamName: "개발팀",
-  },
-  {
-    id: 5,
-    type: "system",
-    title: "시스템 알림",
-    message: "비밀번호가 성공적으로 변경되었습니다.",
-    time: "어제",
-    teamName: "",
-  },
-]
+import { onboardingService } from "@/services/onboardingService"
 
 const NOTIFICATION_TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
   schedule: {
@@ -93,12 +51,12 @@ const NOTIFICATION_TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: s
 
 // ── 알림 타입 설정 ─────────────────────────────────────────────────
 const INBOX_TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
-  TEAM_INVITE:      { icon: <Mail className="h-4 w-4" />,           color: "bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400",    label: "팀 초대" },
-  INVITE_ACCEPTED:  { icon: <Check className="h-4 w-4" />,          color: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400",        label: "초대 수락" },
-  INVITE_REJECTED:  { icon: <X className="h-4 w-4" />,              color: "bg-red-100 text-red-500 dark:bg-red-900/40 dark:text-red-400",            label: "초대 거절" },
-  SCHEDULE_ASSIGN:  { icon: <Calendar className="h-4 w-4" />,       color: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400",        label: "일정" },
-  MEMO_MENTION:     { icon: <FileText className="h-4 w-4" />,       color: "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400",    label: "메모" },
-  COMMENT:          { icon: <MessageSquare className="h-4 w-4" />,  color: "bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400", label: "댓글" },
+  TEAM_INVITE: { icon: <Mail className="h-4 w-4" />, color: "bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400", label: "팀 초대" },
+  INVITE_ACCEPTED: { icon: <Check className="h-4 w-4" />, color: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400", label: "초대 수락" },
+  INVITE_REJECTED: { icon: <X className="h-4 w-4" />, color: "bg-red-100 text-red-500 dark:bg-red-900/40 dark:text-red-400", label: "초대 거절" },
+  SCHEDULE_ASSIGN: { icon: <Calendar className="h-4 w-4" />, color: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400", label: "일정" },
+  MEMO_MENTION: { icon: <FileText className="h-4 w-4" />, color: "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400", label: "메모" },
+  COMMENT: { icon: <MessageSquare className="h-4 w-4" />, color: "bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400", label: "댓글" },
 }
 const DEFAULT_INBOX_CFG = { icon: <Shield className="h-4 w-4" />, color: "bg-slate-100 text-slate-500", label: "알림" }
 
@@ -186,7 +144,7 @@ export function MainPage({ onSelectTeam, onNavigate }: MainPageProps) {
       await inboxService.acceptTeamInvite(notif.id)
       // 수락 후 읽음 처리
       if (!notif.is_read) {
-        await inboxService.markAsRead(notif.id).catch(() => {})
+        await inboxService.markAsRead(notif.id).catch(() => { })
       }
       toast({ title: "초대 수락", description: "팀에 성공적으로 가입되었습니다!" })
       await fetchInbox()
@@ -204,7 +162,7 @@ export function MainPage({ onSelectTeam, onNavigate }: MainPageProps) {
       await inboxService.rejectTeamInvite(notif.id)
       // 거절 후 읽음 처리
       if (!notif.is_read) {
-        await inboxService.markAsRead(notif.id).catch(() => {})
+        await inboxService.markAsRead(notif.id).catch(() => { })
       }
       toast({ title: "초대 거절", description: "팀 초대를 거절했습니다." })
       await fetchInbox()
@@ -226,6 +184,7 @@ export function MainPage({ onSelectTeam, onNavigate }: MainPageProps) {
     setTeams([])
     toast({ title: "로그아웃 성공", description: "로그아웃이 완료되었습니다!" })
   }
+
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-8 md:p-12 animate-in fade-in duration-700">

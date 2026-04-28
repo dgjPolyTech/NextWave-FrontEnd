@@ -73,7 +73,13 @@ export default function Home() {
       case "notification-list":
         return <NotificationList />
       case "user-signup":
-        return <UserSignUp />
+        return <UserSignUp onSuccess={(teamId) => {
+          if (teamId) {
+            handleSelectTeam(teamId)
+          } else {
+            setCurrentPage("main")
+          }
+        }} />
       case "user-detail":
         return <UserDetail />
       case "user-update":

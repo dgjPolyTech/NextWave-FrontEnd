@@ -77,7 +77,10 @@ export function NotificationList() {
         await inboxService.markAsRead(notif.id).catch(() => { })
       }
       toast({ title: "초대 수락", description: "팀에 성공적으로 가입되었습니다!" })
-      fetchNotifications()
+      // 알림 목록에서 해당 알림 제거 또는 타입 변경
+      setNotifications(prev =>
+        prev.filter(n => n.id !== notif.id)
+      )
     } catch (err: any) {
       toast({ title: "수락 실패", description: err.response?.data?.detail || err.message, variant: "destructive" })
     } finally {
@@ -94,7 +97,10 @@ export function NotificationList() {
         await inboxService.markAsRead(notif.id).catch(() => { })
       }
       toast({ title: "초대 거절", description: "팀 초대를 거절했습니다." })
-      fetchNotifications()
+      // 알림 목록에서 해당 알림 제거
+      setNotifications(prev =>
+        prev.filter(n => n.id !== notif.id)
+      )
     } catch (err: any) {
       toast({ title: "거절 실패", description: err.response?.data?.detail || err.message, variant: "destructive" })
     } finally {
