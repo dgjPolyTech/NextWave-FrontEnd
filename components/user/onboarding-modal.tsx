@@ -179,26 +179,16 @@ export function OnboardingModal({ isOpen, onComplete }: OnboardingModalProps) {
 
               {/* CTA 버튼들 */}
               <div className="flex flex-col gap-2 pt-1">
-                <p className="text-xs text-slate-500 text-center mb-1">어디서부터 시작할까요?</p>
+                <p className="text-xs text-slate-500 text-center mb-1">이제 팀과 함께 효율적으로 협업해보세요!</p>
 
                 <Button
-                  id="onboarding-schedule-btn"
-                  className="w-full h-11 rounded-xl font-bold bg-blue-600 hover:bg-blue-500 text-white gap-2 shadow-lg shadow-blue-900/30"
+                  id="onboarding-start-btn"
+                  className="w-full h-12 rounded-xl font-bold bg-primary hover:bg-primary/90 text-white gap-2 shadow-lg shadow-primary/20"
                   onClick={() => { setFeatureIntent("schedule"); setStep("team-create") }}
                 >
-                  <Calendar className="h-4 w-4" />
-                  일정 만들어보기
-                  <ChevronRight className="h-4 w-4 ml-auto" />
-                </Button>
-
-                <Button
-                  id="onboarding-memo-btn"
-                  className="w-full h-11 rounded-xl font-bold bg-purple-600 hover:bg-purple-500 text-white gap-2 shadow-lg shadow-purple-900/30"
-                  onClick={() => { setFeatureIntent("memo"); setStep("team-create") }}
-                >
-                  <FileText className="h-4 w-4" />
-                  메모 작성해보기
-                  <ChevronRight className="h-4 w-4 ml-auto" />
+                  <Sparkles className="h-5 w-5" />
+                  온보딩 시작하기 (일정 & 메모 가이드)
+                  <ArrowRight className="h-4 w-4 ml-auto" />
                 </Button>
 
                 <Button
@@ -207,7 +197,7 @@ export function OnboardingModal({ isOpen, onComplete }: OnboardingModalProps) {
                   className="w-full h-10 rounded-xl text-slate-500 hover:text-slate-300 hover:bg-white/5 text-sm"
                   onClick={handleSkip}
                 >
-                  나중에 둘러볼게요
+                  나중에 할게요
                 </Button>
               </div>
             </div>

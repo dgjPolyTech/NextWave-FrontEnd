@@ -110,9 +110,9 @@ export function ScheduleCreateForm({ teamId, onSuccess }: ScheduleCreateFormProp
       
       alert("일정이 생성되었습니다!")
       
-      // 온보딩 완료 처리
+      // 온보딩 완료 처리 (다음 단계인 메모 작성으로 유도)
       if (isOnboarding) {
-        onboardingService.setStep('COMPLETED')
+        onboardingService.setStep('SCHEDULE_COMPLETED')
         setIsOnboarding(false)
       }
 
@@ -169,6 +169,19 @@ export function ScheduleCreateForm({ teamId, onSuccess }: ScheduleCreateFormProp
                   사용자님의 프로필을 분석하여 <strong>맞춤형 추천 일정</strong>을 미리 입력해두었습니다. <br />
                   내용을 확인하신 후 아래 버튼을 눌러 첫 일정을 완성해보세요!
                 </p>
+                <div className="pt-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs text-primary hover:text-primary hover:bg-primary/10 p-0"
+                    onClick={() => {
+                      onboardingService.setStep('COMPLETED');
+                      setIsOnboarding(false);
+                    }}
+                  >
+                    온보딩 건너뛰기
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

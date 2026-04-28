@@ -25,9 +25,10 @@ import { onboardingService } from "@/services/onboardingService"
 interface ScheduleViewProps {
   teamId?: number
   onSelectSchedule?: (schedule: ScheduleResponse) => void
+  onNavigate?: (page: any) => void
 }
 
-export function ScheduleView({ teamId, onSelectSchedule }: ScheduleViewProps) {
+export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleViewProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [schedules, setSchedules] = useState<ScheduleResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -64,6 +65,12 @@ export function ScheduleView({ teamId, onSelectSchedule }: ScheduleViewProps) {
   const handleCreateSuccess = () => {
     setIsDialogOpen(false)
     fetchSchedules()
+    
+    // 온보딩 중일 경우 (일정 생성 후) 대시보드로 이동하여 다음 단계(메모) 유도
+    const currentStep = onboardingService.getStep()
+    if (currentStep === 'SCHEDULE_COMPLETED' && onNavigate) {
+      onNavigate("dashboard")
+    }
   }
 
   const formatDateTime = (isoString: string) => {
@@ -76,17 +83,28 @@ export function ScheduleView({ teamId, onSelectSchedule }: ScheduleViewProps) {
 
   return (
     <div className="p-8 space-y-8 animate-in fade-in duration-500 relative">
-      {/* 온보딩 안내 레이어 */}
+      {/* 온보딩 배경 어둡게 처리 */}
       {onboardingStep === 'TEAM_CREATED' && (
-        <div className="absolute inset-x-0 -top-4 z-40 flex justify-end px-8">
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-xl border-2 border-primary animate-in slide-in-from-top-4 duration-500 max-w-xs text-right">
-            <p className="text-sm font-bold">마지막 단계입니다! ✨</p>
-            <p className="text-muted-foreground text-xs mb-2">
-              **일정 생성** 버튼을 눌러 첫 일정을 등록해보세요.
-            </p>
-            <div className="flex justify-end">
-              <div className="w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[12px] border-b-primary absolute -bottom-3 right-10 rotate-180" />
+        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] transition-all duration-500" />
+      )}
+
+      {/* 온보딩 안내 레이어 - 버튼 바로 아래에 배치 */}
+      {onboardingStep === 'TEAM_CREATED' && (
+        <div className="absolute top-24 right-8 z-50 animate-in slide-in-from-top-4 duration-500 flex justify-end">
+          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-2xl border-2 border-primary max-w-xs text-right relative">
+            {/* 화살표 (버튼을 가리킴) */}
+            <div className="absolute -top-3 right-8">
+              <div className="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[15px] border-b-primary" />
             </div>
+
+            <p className="text-sm font-bold text-foreground">마지막 단계입니다! ✨</p>
+            <p className="text-muted-foreground text-xs mt-1 mb-3 leading-relaxed">
+              위의 **일정 생성** 버튼을 눌러 첫 일정을 등록해보세요. AI 추천 내용이 자동으로 채워져 있습니다!
+            </p>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => {
+              onboardingService.setStep('COMPLETED');
+              setOnboardingStep('COMPLETED');
+            }}>건너뛰기</Button>
           </div>
         </div>
       )}

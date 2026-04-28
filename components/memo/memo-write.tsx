@@ -18,13 +18,16 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { memoService } from "@/services/memoService"
 import { scheduleService, ScheduleResponse } from "@/services/scheduleService"
 import { teamService, TeamMemberResponse } from "@/services/teamService"
+import { onboardingService } from "@/services/onboardingService"
+import { Sparkles } from "lucide-react"
 
 interface MemoWriteProps {
   teamId: number
   onSuccess?: () => void
+  onNavigate?: (page: any) => void
 }
 
-export function MemoWrite({ teamId, onSuccess }: MemoWriteProps) {
+export function MemoWrite({ teamId, onSuccess, onNavigate }: MemoWriteProps) {
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -34,6 +37,24 @@ export function MemoWrite({ teamId, onSuccess }: MemoWriteProps) {
   const [schedules, setSchedules] = useState<ScheduleResponse[]>([])
   const [teamMembers, setTeamMembers] = useState<TeamMemberResponse[]>([])
   const [selectedMentions, setSelectedMentions] = useState<string[]>([])
+  const [isOnboarding, setIsOnboarding] = useState(false)
+
+  // 온보딩 데이터 확인 및 자동 입력
+  useEffect(() => {
+    const step = onboardingService.getStep()
+    if (step === 'SCHEDULE_COMPLETED') {
+      const guide = onboardingService.getGuideData()
+      if (guide && guide.guide.example_memo) {
+        const ex = guide.guide.example_memo
+        setFormData(prev => ({
+          ...prev,
+          title: ex.title,
+          content: ex.content,
+        }))
+        setIsOnboarding(true)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const fetchSchedules = async () => {
@@ -78,9 +99,22 @@ export function MemoWrite({ teamId, onSuccess }: MemoWriteProps) {
 
       await memoService.createMemo(payload)
       alert("Memo saved!")
+
+      // 온보딩 최종 완료 처리
+      if (isOnboarding) {
+        onboardingService.setStep('COMPLETED')
+        setIsOnboarding(false)
+      }
+
       setFormData({ title: "", content: "", schedule_id: "" })
       setSelectedMentions([])
-      if (onSuccess) onSuccess()
+      
+      // 온보딩 중일 경우 대시보드로 이동하여 최종 완료 메시지 노출
+      if (isOnboarding && onNavigate) {
+        onNavigate("dashboard")
+      } else if (onSuccess) {
+        onSuccess()
+      }
     } catch (error: any) {
       console.error("Memo creation failed:", error)
       const detail = error.response?.data?.detail
@@ -113,6 +147,37 @@ export function MemoWrite({ teamId, onSuccess }: MemoWriteProps) {
           <CardDescription>Enter memo content</CardDescription>
         </CardHeader>
         <CardContent>
+          {isOnboarding && (
+            <div className="mb-6 p-4 rounded-xl bg-primary/10 border border-primary/20 animate-in fade-in slide-in-from-top-2 duration-500">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 bg-primary/20 p-1.5 rounded-lg">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-bold text-primary flex items-center gap-1">
+                    AI 맞춤형 가이드 (마지막 단계)
+                  </p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    사용자님의 프로필을 분석하여 <strong>맞춤형 추천 메모</strong>를 미리 입력해두었습니다. <br />
+                    내용을 확인하신 후 아래 버튼을 눌러 첫 메모 작성을 완료해보세요!
+                  </p>
+                  <div className="pt-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs text-primary hover:text-primary hover:bg-primary/10 p-0"
+                      onClick={() => {
+                        onboardingService.setStep('COMPLETED');
+                        setIsOnboarding(false);
+                      }}
+                    >
+                      온보딩 건너뛰기
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-3 gap-4">
               <div className="col-span-2 space-y-2">

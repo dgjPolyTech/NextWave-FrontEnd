@@ -26,8 +26,9 @@ const ONBOARDING_DONE_PREFIX = 'onboarding_completed_';
 const ONBOARDING_TEAM_KEY = 'onboarding_team';
 const ONBOARDING_STEP_KEY = 'onboarding_step';
 const ONBOARDING_GUIDE_KEY = 'onboarding_guide';
+const ONBOARDING_FINAL_MESSAGE_KEY = 'onboarding_final_message_shown';
 
-export type OnboardingStep = 'IDLE' | 'TEAM_CREATED' | 'SCHEDULE_GUIDE' | 'COMPLETED';
+export type OnboardingStep = 'IDLE' | 'TEAM_CREATED' | 'SCHEDULE_COMPLETED' | 'COMPLETED';
 
 export const onboardingService = {
     getGuide: async (): Promise<OnboardingResponse> => {
@@ -99,5 +100,17 @@ export const onboardingService = {
         } catch {
             return null;
         }
+    },
+
+    /** 최종 완료 메시지 표시 여부 */
+    isFinalMessageShown: (): boolean => {
+        if (typeof window === 'undefined') return false;
+        return !!localStorage.getItem(ONBOARDING_FINAL_MESSAGE_KEY);
+    },
+
+    /** 최종 완료 메시지 표시 완료 저장 */
+    markFinalMessageShown: (): void => {
+        if (typeof window === 'undefined') return;
+        localStorage.setItem(ONBOARDING_FINAL_MESSAGE_KEY, '1');
     },
 };
