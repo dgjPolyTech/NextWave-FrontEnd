@@ -25,11 +25,10 @@ export default function Home() {
     selectedMemo,
     setSelectedMemo,
     selectedSchedule,
-    setSelectedSchedule
+    setSelectedSchedule,
+    selectedTeamId,
+    setSelectedTeamId
   } = useNavigation()
-
-  // 선택된 팀 ID를 전역적으로 관리
-  const [selectedTeamId, setSelectedTeamId] = useState<number>(0)
 
   const handleSelectTeam = (teamId: number) => {
     setSelectedTeamId(teamId)
