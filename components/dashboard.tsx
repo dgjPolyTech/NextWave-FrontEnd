@@ -13,7 +13,8 @@ import {
   TrendingUp,
   CheckCircle2,
   CalendarDays,
-  Loader2
+  Loader2,
+  Sparkles
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -24,6 +25,7 @@ import { scheduleService, ScheduleResponse } from "@/services/scheduleService"
 import { memoService, MemoResponse } from "@/services/memoService"
 import { notificationService, NotificationResponse } from "@/services/notificationService"
 import { userService, UserResponse } from "@/services/userService"
+import { onboardingService } from "@/services/onboardingService"
 
 type PageType =
   | "dashboard"
@@ -46,6 +48,11 @@ export function Dashboard({ teamId, onNavigate }: DashboardProps) {
   const [notifications, setNotifications] = useState<NotificationResponse[]>([])
   const [user, setUser] = useState<UserResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [onboardingStep, setOnboardingStep] = useState<string>('IDLE')
+
+  useEffect(() => {
+    setOnboardingStep(onboardingService.getStep())
+  }, [])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -94,7 +101,22 @@ export function Dashboard({ teamId, onNavigate }: DashboardProps) {
   const recentNotifications = notifications.slice(0, 3)
 
   return (
-    <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
+    <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-500 relative">
+      {/* 온보딩 안내 레이어 */}
+      {onboardingStep === 'TEAM_CREATED' && (
+        <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm pointer-events-none flex items-center justify-center">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-2xl border-2 border-primary animate-bounce pointer-events-auto max-w-sm text-center">
+            <Sparkles className="h-10 w-10 text-primary mx-auto mb-3" />
+            <h3 className="text-xl font-bold mb-2">팀 생성을 축하합니다! 🥳</h3>
+            <p className="text-muted-foreground text-sm mb-4">
+              이제 팀원들과 공유할 **첫 번째 일정**을 만들어볼까요? <br />
+              오른쪽 상단의 버튼을 클릭해보세요.
+            </p>
+            <Button size="sm" onClick={() => setOnboardingStep('IDLE')}>알겠습니다!</Button>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -108,7 +130,7 @@ export function Dashboard({ teamId, onNavigate }: DashboardProps) {
         <div className="flex gap-2">
           <Button
             onClick={() => onNavigate("schedule-view")}
-            className="shadow-md hover:shadow-lg transition-all"
+            className={`shadow-md hover:shadow-lg transition-all ${onboardingStep === 'TEAM_CREATED' ? 'ring-4 ring-primary ring-offset-4 animate-pulse relative z-50' : ''}`}
           >
             <Plus className="mr-2 h-4 w-4" /> 일정 만들기
           </Button>
@@ -209,7 +231,7 @@ export function Dashboard({ teamId, onNavigate }: DashboardProps) {
                 <CheckCircle2 className="h-4 w-4 text-muted-foreground/30" />
               </div>
             )) : (
-               <div className="text-center py-8 text-muted-foreground text-sm">작성된 메모가 없습니다.</div>
+              <div className="text-center py-8 text-muted-foreground text-sm">작성된 메모가 없습니다.</div>
             )}
           </CardContent>
         </Card>
@@ -234,7 +256,7 @@ export function Dashboard({ teamId, onNavigate }: DashboardProps) {
                   // Find schedule title if possible
                   const schedule = schedules.find(s => s.id === item.schedule_id)
                   const content = schedule ? `'${schedule.title}' 일정이 다가오고 있습니다.` : "새로운 알림이 도착했습니다."
-                  
+
                   return (
                     <div key={item.id} className="relative flex items-start gap-4 pl-0">
                       <div className={`mt-1.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-background shadow-sm z-10 text-blue-500`}>
