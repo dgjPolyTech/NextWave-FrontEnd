@@ -13,7 +13,10 @@ import { TeamCreate } from "@/components/team/team-create"
 import { TeamInvite } from "@/components/team/team-invite"
 import { NotificationCreate } from "@/components/notification/notification-create"
 import { NotificationRules } from "@/components/notification/notification-rules"
+import { NotificationList } from "@/components/notification/notification-list"
 import { UserSignUp } from "@/components/user/user-signup"
+import { UserDetail } from "@/components/user/user-detail"
+import { UserUpdate } from "@/components/user/user-update"
 
 export default function Home() {
   const {
@@ -67,8 +70,20 @@ export default function Home() {
         return <NotificationCreate teamId={selectedTeamId} />
       case "notification-rules":
         return <NotificationRules teamId={selectedTeamId} />
+      case "notification-list":
+        return <NotificationList />
       case "user-signup":
-        return <UserSignUp />
+        return <UserSignUp onSuccess={(teamId) => {
+          if (teamId) {
+            handleSelectTeam(teamId)
+          } else {
+            setCurrentPage("main")
+          }
+        }} />
+      case "user-detail":
+        return <UserDetail />
+      case "user-update":
+        return <UserUpdate />
       default:
         return <MainPage onSelectTeam={handleSelectTeam} onNavigate={setCurrentPage} />
     }

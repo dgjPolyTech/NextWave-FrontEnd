@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { FileText, Bold, Italic, List, Link, Save } from "lucide-react"
+import { FileText, Bold, Italic, List, Link, Save, Users } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,8 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { memoService } from "@/services/memoService"
 import { scheduleService, ScheduleResponse } from "@/services/scheduleService"
+import { teamService, TeamMemberResponse } from "@/services/teamService"
 
 interface MemoWriteProps {
   teamId: number
@@ -30,6 +32,8 @@ export function MemoWrite({ teamId, onSuccess }: MemoWriteProps) {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [schedules, setSchedules] = useState<ScheduleResponse[]>([])
+  const [teamMembers, setTeamMembers] = useState<TeamMemberResponse[]>([])
+  const [selectedMentions, setSelectedMentions] = useState<string[]>([])
 
   useEffect(() => {
     const fetchSchedules = async () => {
@@ -43,29 +47,50 @@ export function MemoWrite({ teamId, onSuccess }: MemoWriteProps) {
     fetchSchedules()
   }, [teamId])
 
+  // Fetch team members
+  useEffect(() => {
+    const fetchTeamMembers = async () => {
+      try {
+        const members = await teamService.getMembers(teamId)
+        setTeamMembers(members)
+      } catch (error) {
+        console.error("Failed to fetch team members:", error)
+      }
+    }
+    fetchTeamMembers()
+  }, [teamId])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     try {
-      await memoService.createMemo({
+      const payload: any = {
         title: formData.title,
         content: formData.content || null,
         team_id: teamId,
         schedule_id: formData.schedule_id ? Number(formData.schedule_id) : null,
-      })
-      alert("메모가 저장되었습니다!")
+      }
+
+      // Add mentions
+      if (selectedMentions.length > 0) {
+        payload.mentions = selectedMentions.map(id => parseInt(id))
+      }
+
+      await memoService.createMemo(payload)
+      alert("Memo saved!")
       setFormData({ title: "", content: "", schedule_id: "" })
+      setSelectedMentions([])
       if (onSuccess) onSuccess()
     } catch (error: any) {
       console.error("Memo creation failed:", error)
       const detail = error.response?.data?.detail
       const msg = Array.isArray(detail)
         ? detail.map((d: any) => `${d.loc?.join(".")}: ${d.msg}`).join("\n")
-        : detail || error.message || "알 수 없는 오류"
+        : detail || error.message || "Unknown error"
       if (error.response?.status === 401) {
-        alert("인증이 필요합니다. 먼저 로그인해주세요.")
+        alert("Authentication required. Please login first.")
       } else {
-        alert("메모 저장 중 오류가 발생했습니다:\n" + msg)
+        alert("Error saving memo:\n" + msg)
       }
     } finally {
       setIsLoading(false)
@@ -75,42 +100,42 @@ export function MemoWrite({ teamId, onSuccess }: MemoWriteProps) {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">메모 작성</h1>
-        <p className="text-muted-foreground mt-1">새로운 메모를 작성하세요</p>
+        <h1 className="text-3xl font-bold text-foreground">Write Memo</h1>
+        <p className="text-muted-foreground mt-1">Create a new memo</p>
       </div>
 
       <Card className="max-w-3xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            새 메모
+            New Memo
           </CardTitle>
-          <CardDescription>메모 내용을 입력해 주세요</CardDescription>
+          <CardDescription>Enter memo content</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-3 gap-4">
               <div className="col-span-2 space-y-2">
-                <Label htmlFor="title">제목</Label>
+                <Label htmlFor="title">Title</Label>
                 <Input
                   id="title"
-                  placeholder="메모 제목을 입력하세요"
+                  placeholder="Enter memo title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="schedule_id">일정 연결 (선택)</Label>
+                <Label htmlFor="schedule_id">Link Schedule (Optional)</Label>
                 <Select
                   value={formData.schedule_id || "none"}
                   onValueChange={(value) => setFormData({ ...formData, schedule_id: value === "none" ? "" : value })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="선택 안함" />
+                    <SelectValue placeholder="None" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">선택 안함</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {schedules.map((s) => (
                       <SelectItem key={s.id} value={String(s.id)}>
                         {s.title}
@@ -122,7 +147,45 @@ export function MemoWrite({ teamId, onSuccess }: MemoWriteProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="content">내용</Label>
+              <Label className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Mention Users (Optional)
+              </Label>
+              <div className="border rounded-md p-4 space-y-2 max-h-48 overflow-y-auto">
+                {teamMembers.length > 0 ? (
+                  teamMembers.map((member) => (
+                    <div key={member.user_id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`mention-${member.user_id}`}
+                        checked={selectedMentions.includes(String(member.user_id))}
+                        onCheckedChange={(checked) => {
+                          const userId = String(member.user_id)
+                          if (checked) {
+                            setSelectedMentions([...selectedMentions, userId])
+                          } else {
+                            setSelectedMentions(selectedMentions.filter(id => id !== userId))
+                          }
+                        }}
+                      />
+                      <Label
+                        htmlFor={`mention-${member.user_id}`}
+                        className="text-sm cursor-pointer"
+                      >
+                        {member.user_name} ({member.role})
+                      </Label>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No team members.</p>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Selected users will receive a memo mention notification.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="content">Content</Label>
               <div className="border rounded-lg">
                 <div className="flex items-center gap-1 p-2 border-b bg-muted/50">
                   <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
@@ -140,7 +203,7 @@ export function MemoWrite({ teamId, onSuccess }: MemoWriteProps) {
                 </div>
                 <Textarea
                   id="content"
-                  placeholder="메모 내용을 입력하세요..."
+                  placeholder="Enter memo content..."
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                   className="border-0 focus-visible:ring-0 min-h-[300px] resize-none"
@@ -151,7 +214,7 @@ export function MemoWrite({ teamId, onSuccess }: MemoWriteProps) {
             <div className="flex justify-end gap-3">
               <Button type="submit" disabled={isLoading}>
                 <Save className="h-4 w-4 mr-2" />
-                {isLoading ? "저장 중..." : "저장하기"}
+                {isLoading ? "Saving..." : "Save"}
               </Button>
             </div>
           </form>

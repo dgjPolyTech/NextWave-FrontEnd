@@ -20,6 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { ScheduleCreateForm } from "./schedule-create"
 import { scheduleService, ScheduleResponse } from "@/services/scheduleService"
+import { onboardingService } from "@/services/onboardingService"
 
 interface ScheduleViewProps {
   teamId?: number
@@ -30,6 +31,18 @@ export function ScheduleView({ teamId, onSelectSchedule }: ScheduleViewProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [schedules, setSchedules] = useState<ScheduleResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [onboardingStep, setOnboardingStep] = useState<string>('IDLE')
+
+  useEffect(() => {
+    setOnboardingStep(onboardingService.getStep())
+  }, [])
+
+  // 온보딩 중 다이얼로그가 열려도 바로 종료하지 않고 유지 (생성 폼에서 처리)
+  useEffect(() => {
+    if (isDialogOpen && onboardingStep === 'TEAM_CREATED') {
+      // 로직 제거
+    }
+  }, [isDialogOpen, onboardingStep])
 
   const fetchSchedules = async () => {
     setIsLoading(true)
@@ -62,7 +75,22 @@ export function ScheduleView({ teamId, onSelectSchedule }: ScheduleViewProps) {
   }
 
   return (
-    <div className="p-8 space-y-8 animate-in fade-in duration-500">
+    <div className="p-8 space-y-8 animate-in fade-in duration-500 relative">
+      {/* 온보딩 안내 레이어 */}
+      {onboardingStep === 'TEAM_CREATED' && (
+        <div className="absolute inset-x-0 -top-4 z-40 flex justify-end px-8">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-xl border-2 border-primary animate-in slide-in-from-top-4 duration-500 max-w-xs text-right">
+            <p className="text-sm font-bold">마지막 단계입니다! ✨</p>
+            <p className="text-muted-foreground text-xs mb-2">
+              **일정 생성** 버튼을 눌러 첫 일정을 등록해보세요.
+            </p>
+            <div className="flex justify-end">
+              <div className="w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[12px] border-b-primary absolute -bottom-3 right-10 rotate-180" />
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
@@ -82,7 +110,7 @@ export function ScheduleView({ teamId, onSelectSchedule }: ScheduleViewProps) {
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="shadow-md hover:shadow-lg transition-all">
+              <Button className={`shadow-md hover:shadow-lg transition-all ${onboardingStep === 'TEAM_CREATED' ? 'ring-4 ring-primary ring-offset-4 animate-pulse relative z-50' : ''}`}>
                 <Plus className="mr-2 h-4 w-4" /> 일정 생성
               </Button>
             </DialogTrigger>
@@ -102,8 +130,8 @@ export function ScheduleView({ teamId, onSelectSchedule }: ScheduleViewProps) {
       ) : (
         <div className="grid gap-4">
           {schedules.map((schedule) => (
-            <Card 
-              key={schedule.id} 
+            <Card
+              key={schedule.id}
               className="hover:shadow-md transition-all group cursor-pointer"
               onClick={() => onSelectSchedule?.(schedule)}
             >

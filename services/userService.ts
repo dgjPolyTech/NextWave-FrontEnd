@@ -4,6 +4,10 @@ export interface UserCreate {
     email: string;
     username: string;
     password: string;
+    job?: string | null;
+    age: number;
+    gender?: string | null;
+    purpose?: string | null;
     image_path?: string | null;
 }
 
@@ -11,6 +15,10 @@ export interface UserResponse {
     id: number;
     email: string;
     username: string;
+    job?: string | null;
+    age: number;
+    gender?: string | null;
+    purpose?: string | null;
     image_path?: string | null;
     created_at: string;
 }
@@ -18,6 +26,10 @@ export interface UserResponse {
 export interface UserUpdate {
     username?: string | null;
     password?: string | null;
+    job?: string | null;
+    age?: number | null;
+    gender?: string | null;
+    purpose?: string | null;
 }
 
 export const userService = {

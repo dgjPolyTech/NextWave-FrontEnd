@@ -25,6 +25,7 @@ export interface TeamMemberCreate {
 
 export interface TeamMemberResponse {
     id: number;
+    user_id: number;
     team_name: string;
     user_name: string;
     role: string;
@@ -71,9 +72,8 @@ export const teamService = {
         return response.data;
     },
     
-    inviteMember: async (teamId: number, data: TeamMemberCreate): Promise<TeamMemberResponse> => {
-        const response = await api.post<TeamMemberResponse>(`/api/v1/teams/${teamId}/members`, data);
-        return response.data;
+    inviteMember: async (teamId: number, data: TeamMemberCreate): Promise<void> => {
+        await api.post(`/api/v1/teams/${teamId}/members`, data);
     },
     
     removeMember: async (teamId: number, userId: number): Promise<void> => {
