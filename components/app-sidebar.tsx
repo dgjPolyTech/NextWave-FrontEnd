@@ -12,6 +12,7 @@ import {
   User as UserIcon
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useNavigation } from "@/hooks/use-navigation"
 import { PageType, PAGES } from "@/lib/constants"
 import { Button } from "@/components/ui/button"
 import {
@@ -29,6 +30,7 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
+  const { setIsNotificationModalOpen } = useNavigation()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [user, setUser] = useState<UserResponse | null>(null)
 
@@ -122,6 +124,14 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
             onClick={() => onNavigate(PAGES.TEAM_MANAGE)}
             isCollapsed={isCollapsed}
           />
+
+          <SidebarNavItem
+            icon={Bell}
+            label="알림함"
+            isActive={false}
+            onClick={() => setIsNotificationModalOpen(true)}
+            isCollapsed={isCollapsed}
+          />
         </nav>
 
         {/* Footer */}
@@ -177,4 +187,3 @@ function SidebarNavItem({ icon: Icon, label, isActive, onClick, isCollapsed }: a
 
   return content
 }
-

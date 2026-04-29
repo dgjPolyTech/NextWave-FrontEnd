@@ -3,9 +3,10 @@
 import { useNavigation } from "@/hooks/use-navigation"
 import { AppSidebar } from "./app-sidebar"
 import { PAGES } from "@/lib/constants"
+import { NotificationModal } from "./notification/notification-modal"
 
 export function SidebarWrapper({ children }: { children: React.ReactNode }) {
-  const { currentPage, setCurrentPage } = useNavigation()
+  const { currentPage, setCurrentPage, isNotificationModalOpen, setIsNotificationModalOpen } = useNavigation()
 
   const TEAM_PAGES = [
     PAGES.DASHBOARD,
@@ -32,6 +33,12 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
       <main className="flex-1 overflow-auto">
         {children}
       </main>
+
+      {/* Global Notification Modal */}
+      <NotificationModal 
+        isOpen={isNotificationModalOpen} 
+        onClose={() => setIsNotificationModalOpen(false)} 
+      />
     </div>
   )
 }

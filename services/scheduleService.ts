@@ -2,11 +2,12 @@ import { api } from './api';
 
 export interface ScheduleData {
     title: string;
-    description?: string;
+    description?: string | null;
     start_time: string;
-    end_time?: string;
+    end_time?: string | null;
     status?: string;
     team_id: number;
+    assignees?: number[] | null;
 }
 
 export interface ScheduleResponse {
@@ -18,6 +19,7 @@ export interface ScheduleResponse {
     status: string;
     team_id: number;
     created_by: number;
+    assignees: ScheduleAssigneeResponse[];
     created_at: string;
     updated_at: string;
 }
@@ -28,6 +30,7 @@ export interface ScheduleUpdate {
     start_time?: string | null;
     end_time?: string | null;
     status?: string | null;
+    assignees?: number[] | null;
 }
 
 export interface ScheduleStatusUpdate {

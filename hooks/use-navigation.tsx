@@ -13,6 +13,10 @@ interface NavigationContextType {
   setSelectedSchedule: (schedule: any) => void
   selectedTeamId: number
   setSelectedTeamId: (teamId: number) => void
+  isNotificationModalOpen: boolean
+  setIsNotificationModalOpen: (open: boolean) => void
+  processedNotificationIds: Set<number>
+  addProcessedId: (id: number) => void
 }
 
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined)
@@ -26,6 +30,12 @@ function NavigationInner({ children }: { children: ReactNode }) {
   const [selectedMemo, setSelectedMemo] = useState<any>(null)
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null)
   const [selectedTeamId, setSelectedTeamIdInternal] = useState<number>(0)
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
+  const [processedNotificationIds, setProcessedNotificationIds] = useState<Set<number>>(new Set())
+
+  const addProcessedId = useCallback((id: number) => {
+    setProcessedNotificationIds(prev => new Set(prev).add(id))
+  }, [])
 
   // URL 쿼리 파라미터에서 페이지 및 팀 정보 읽기
   useEffect(() => {
@@ -68,7 +78,11 @@ function NavigationInner({ children }: { children: ReactNode }) {
       selectedSchedule,
       setSelectedSchedule,
       selectedTeamId,
-      setSelectedTeamId
+      setSelectedTeamId,
+      isNotificationModalOpen,
+      setIsNotificationModalOpen,
+      processedNotificationIds,
+      addProcessedId
     }}>
       {children}
     </NavigationContext.Provider>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useNavigation } from "@/hooks/use-navigation"
 import {
   Calendar,
   FileText,
@@ -37,6 +38,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({ teamId, onNavigate }: DashboardProps) {
+  const { setIsNotificationModalOpen } = useNavigation()
   const [schedules, setSchedules] = useState<ScheduleResponse[]>([])
   const [memos, setMemos] = useState<MemoResponse[]>([])
   const [notifications, setNotifications] = useState<NotificationResponse[]>([])
@@ -360,7 +362,7 @@ export function Dashboard({ teamId, onNavigate }: DashboardProps) {
               </CardTitle>
               <CardDescription>놓친 활동들을 확인하세요</CardDescription>
             </div>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" onClick={() => setIsNotificationModalOpen(true)}>
               <ArrowRight className="h-4 w-4" />
             </Button>
           </CardHeader>
