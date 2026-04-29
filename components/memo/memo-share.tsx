@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { FileText, Eye, Edit, Clock, User, ArrowUpDown, Filter } from "lucide-react"
+import { FileText, Eye, Edit, Clock, User, ArrowUpDown, Filter, Sparkles } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -38,6 +38,7 @@ export function MemoShare({ teamId, onViewMemo }: MemoShareProps) {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
   const [authorFilter, setAuthorFilter] = useState("all")
   const [isWriteModalOpen, setIsWriteModalOpen] = useState(false)
+  const [shouldAutoGenerate, setShouldAutoGenerate] = useState(false)
   const itemsPerPage = 10
 
   const fetchMemos = async () => {
@@ -97,9 +98,24 @@ export function MemoShare({ teamId, onViewMemo }: MemoShareProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Dialog open={isWriteModalOpen} onOpenChange={setIsWriteModalOpen}>
+          <Button 
+            variant="outline" 
+            className="hidden sm:flex border-primary/20 text-primary hover:bg-primary/5 hover:border-primary/40 shadow-sm transition-all group relative overflow-hidden h-9"
+            onClick={() => {
+              setShouldAutoGenerate(true);
+              setIsWriteModalOpen(true);
+            }}
+          >
+            <Sparkles className="mr-2 h-4 w-4 text-primary animate-pulse" />
+            자동 메모 생성
+          </Button>
+
+          <Dialog open={isWriteModalOpen} onOpenChange={(open) => {
+            setIsWriteModalOpen(open);
+            if (!open) setShouldAutoGenerate(false);
+          }}>
             <DialogTrigger asChild>
-              <Button className="h-9 gap-2 shadow-md hover:shadow-lg transition-all">
+              <Button className="h-9 gap-2 shadow-md hover:shadow-lg transition-all" onClick={() => setShouldAutoGenerate(false)}>
                 <Plus className="h-4 w-4" />
                 메모 생성
               </Button>
@@ -114,8 +130,10 @@ export function MemoShare({ teamId, onViewMemo }: MemoShareProps) {
               <MemoWrite
                 teamId={teamId}
                 hideHeader={true}
+                autoGenerate={shouldAutoGenerate}
                 onSuccess={() => {
                   setIsWriteModalOpen(false);
+                  setShouldAutoGenerate(false);
                   fetchMemos();
                 }}
               />

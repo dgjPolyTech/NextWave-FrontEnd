@@ -11,14 +11,18 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { scheduleService } from "@/services/scheduleService"
 import { teamService, TeamMemberResponse } from "@/services/teamService"
 import { onboardingService } from "@/services/onboardingService"
-import { Sparkles, AlertCircle } from "lucide-react"
+import { Sparkles, AlertCircle, Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface ScheduleCreateFormProps {
   teamId?: number
   onSuccess?: () => void
+  initialData?: any
+  isAiGenerated?: boolean
+  autoGenerate?: boolean
 }
 
-export function ScheduleCreateForm({ teamId, onSuccess }: ScheduleCreateFormProps) {
+export function ScheduleCreateForm({ teamId, onSuccess, initialData, isAiGenerated, autoGenerate }: ScheduleCreateFormProps) {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -32,6 +36,9 @@ export function ScheduleCreateForm({ teamId, onSuccess }: ScheduleCreateFormProp
   const [teamMembers, setTeamMembers] = useState<TeamMemberResponse[]>([])
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([])
   const [isOnboarding, setIsOnboarding] = useState(false)
+  const [isAiLoading, setIsAiLoading] = useState(false)
+  const [internalAiData, setInternalAiData] = useState<any>(null)
+  const [isInternalAiGenerated, setIsInternalAiGenerated] = useState(false)
 
   const parseISO = (isoString: string | null) => {
     if (!isoString) return null
@@ -56,24 +63,97 @@ export function ScheduleCreateForm({ teamId, onSuccess }: ScheduleCreateFormProp
     }
   }
 
-  // 온보딩 데이터 확인 및 자동 입력
+  // AI 자동 생성 트리거
   useEffect(() => {
-    const step = onboardingService.getStep()
-    if (step === 'TEAM_CREATED') {
-      const guide = onboardingService.getGuideData()
-      if (guide && guide.guide.example_schedule) {
-        const ex = guide.guide.example_schedule
-        setFormData(prev => ({
-          ...prev,
-          title: ex.title,
-          description: ex.description,
-          start_time: formatToDateTimeLocal(ex.start_time),
-          end_time: formatToDateTimeLocal(ex.end_time),
-        }))
-        setIsOnboarding(true)
+    if (autoGenerate && !internalAiData && !isAiLoading) {
+      const fetchAiData = async () => {
+        if (!teamId) {
+          console.warn("AI generation skipped: teamId is missing");
+          return;
+        }
+        setIsAiLoading(true)
+        try {
+          // 약간의 인위적인 딜레이를 주어 분석 중임을 체감하게 함
+          await new Promise(resolve => setTimeout(resolve, 1500))
+          const data = await onboardingService.generateContextualGuide(teamId, 'schedule')
+          if (data.example_schedule) {
+            setInternalAiData(data.example_schedule)
+            setIsInternalAiGenerated(true)
+          }
+        } catch (error) {
+          console.error("AI Generation failed:", error)
+        } finally {
+          setIsAiLoading(false)
+        }
+      }
+      fetchAiData()
+    }
+  }, [autoGenerate, teamId])
+
+  // 온보딩 데이터 또는 AI 생성 데이터 스트리밍 입력
+  useEffect(() => {
+    let targetData = initialData || internalAiData;
+    let shouldStream = isAiGenerated || isInternalAiGenerated;
+
+    if (!targetData) {
+      const step = onboardingService.getStep()
+      if (step === 'TEAM_CREATED') {
+        const guide = onboardingService.getGuideData()
+        if (guide && guide.guide.example_schedule) {
+          targetData = guide.guide.example_schedule;
+          setIsOnboarding(true);
+          shouldStream = true; 
+        }
       }
     }
-  }, [])
+
+    if (targetData && shouldStream) {
+      setFormData(prev => ({ ...prev, title: "", description: "" })); // 초기화
+      
+      const title = targetData.title || "";
+      const description = targetData.description || "";
+      let titleIdx = 0;
+      let descIdx = 0;
+
+      const interval = setInterval(() => {
+        setFormData(prev => {
+          let nextTitle = prev.title;
+          let nextDesc = prev.description;
+
+          if (titleIdx < title.length) {
+            nextTitle = title.substring(0, titleIdx + 1);
+            titleIdx++;
+          }
+          if (descIdx < description.length) {
+            nextDesc = description.substring(0, descIdx + 1);
+            descIdx++;
+          }
+
+          return {
+            ...prev,
+            title: nextTitle,
+            description: nextDesc,
+            start_time: formatToDateTimeLocal(targetData.start_time),
+            end_time: formatToDateTimeLocal(targetData.end_time),
+          };
+        });
+
+        if (titleIdx >= title.length && descIdx >= description.length) {
+          clearInterval(interval);
+        }
+      }, 30);
+
+      return () => clearInterval(interval);
+    } else if (targetData) {
+      setFormData(prev => ({
+        ...prev,
+        title: targetData.title,
+        description: targetData.description,
+        start_time: formatToDateTimeLocal(targetData.start_time),
+        end_time: formatToDateTimeLocal(targetData.end_time),
+      }));
+    }
+  }, [initialData, internalAiData, isAiGenerated, isInternalAiGenerated])
 
   // 팀 멤버 목록 조회
   useEffect(() => {
@@ -163,7 +243,16 @@ export function ScheduleCreateForm({ teamId, onSuccess }: ScheduleCreateFormProp
         </CardTitle>
         <CardDescription>일정 정보를 입력하여 팀과 공유하세요.</CardDescription>
       </CardHeader>
-      <CardContent className="px-0 pb-0">
+      <CardContent className="px-0 pb-0 relative min-h-[400px]">
+        {isAiLoading && (
+          <div className="absolute inset-0 z-20 bg-background/40 flex flex-col items-center justify-center rounded-xl animate-in fade-in duration-500">
+            <div className="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center border border-primary/10">
+              <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
+              <p className="text-base font-bold text-primary animate-pulse">AI 분석 중</p>
+              <p className="text-xs text-muted-foreground mt-2">팀의 활동 내역을 기반으로 최적의 일정을 계획하고 있습니다.</p>
+            </div>
+          </div>
+        )}
         {isOnboarding && (
           <div className="mb-6 p-4 rounded-xl bg-primary/10 border border-primary/20 animate-in fade-in slide-in-from-top-2 duration-500">
             <div className="flex items-start gap-3">
@@ -288,10 +377,25 @@ export function ScheduleCreateForm({ teamId, onSuccess }: ScheduleCreateFormProp
           <div className="pt-4">
             <Button
               type="submit"
-              className="w-full shadow-md hover:shadow-lg transition-all"
+              className={cn(
+                "w-full shadow-md hover:shadow-lg transition-all",
+                (isAiGenerated || isInternalAiGenerated) && "bg-primary animate-pulse shadow-[0_0_15px_rgba(var(--primary),0.5)] scale-[1.02]"
+              )}
               disabled={isLoading}
             >
-              {isLoading ? "일정 생성 중..." : "일정 생성하기"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  일정 생성 중...
+                </>
+              ) : (isAiGenerated || isInternalAiGenerated) ? (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  AI 추천 일정으로 생성하기
+                </>
+              ) : (
+                "일정 생성하기"
+              )}
             </Button>
           </div>
         </form>

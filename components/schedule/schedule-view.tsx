@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Calendar, Clock, Users, MoreVertical, Plus } from "lucide-react"
+import { Calendar, Clock, Users, MoreVertical, Plus, Sparkles, Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -32,9 +32,11 @@ interface ScheduleViewProps {
 
 export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleViewProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isAiGenerating, setIsAiGenerating] = useState(false)
+  const [shouldAutoGenerate, setShouldAutoGenerate] = useState(false)
+  const [aiData, setAiData] = useState<any>(null)
   const [schedules, setSchedules] = useState<ScheduleResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  // 온보딩 관련 상태 제거
 
   const fetchSchedules = async () => {
     setIsLoading(true)
@@ -55,10 +57,14 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
 
   const handleCreateSuccess = () => {
     setIsDialogOpen(false)
+    setAiData(null)
     fetchSchedules()
-    
-    // 온보딩 중일 경우 (일정 생성 후) 대시보드로 이동하여 다음 단계 유도 (기존 로직 유지 가능하나 단순화 가능)
-    // 여기서는 fetch만 하고 트리거 컴포넌트에서 완료 처리를 담당함
+  }
+
+  const handleAutoGenerate = () => {
+    setAiData(null)
+    setShouldAutoGenerate(true)
+    setIsDialogOpen(true)
   }
 
   const parseISO = (isoString: string) => {
@@ -94,18 +100,36 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
           </div>
 
           <div className="flex items-center gap-3">
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Button 
+              variant="outline" 
+              className="hidden sm:flex border-primary/20 text-primary hover:bg-primary/5 hover:border-primary/40 shadow-sm transition-all group relative overflow-hidden"
+              onClick={handleAutoGenerate}
+            >
+              <Sparkles className="mr-2 h-4 w-4 text-primary animate-pulse" />
+              자동 일정 생성
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={(open: boolean) => {
+              setIsDialogOpen(open)
+              if (!open) {
+                setAiData(null)
+                setShouldAutoGenerate(false)
+              }
+            }}>
               <DialogTrigger asChild>
-                <Button className="shadow-md hover:shadow-lg transition-all">
+                <Button className="shadow-md hover:shadow-lg transition-all" onClick={() => setShouldAutoGenerate(false)}>
                   <Plus className="mr-2 h-4 w-4" /> 일정 생성
                 </Button>
               </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <ScheduleCreateForm teamId={teamId} onSuccess={handleCreateSuccess} />
-            </DialogContent>
-          </Dialog>
+              <DialogContent className="sm:max-w-[500px]">
+                <ScheduleCreateForm 
+                  teamId={teamId} 
+                  onSuccess={handleCreateSuccess} 
+                  autoGenerate={shouldAutoGenerate}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
-      </div>
 
       {isLoading ? (
         <div className="flex justify-center p-8">데이터를 불러오는 중...</div>

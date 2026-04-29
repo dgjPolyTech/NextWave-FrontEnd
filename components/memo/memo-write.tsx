@@ -20,6 +20,7 @@ import { scheduleService, ScheduleResponse } from "@/services/scheduleService"
 import { teamService, TeamMemberResponse } from "@/services/teamService"
 import { onboardingService } from "@/services/onboardingService"
 import { Sparkles } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { PAGES, ONBOARDING_STEPS } from "@/lib/constants"
 
 interface MemoWriteProps {
@@ -27,9 +28,10 @@ interface MemoWriteProps {
   onSuccess?: () => void
   onNavigate?: (page: any) => void
   hideHeader?: boolean
+  autoGenerate?: boolean
 }
 
-export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }: MemoWriteProps) {
+export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false, autoGenerate }: MemoWriteProps) {
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -40,23 +42,94 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
   const [teamMembers, setTeamMembers] = useState<TeamMemberResponse[]>([])
   const [selectedMentions, setSelectedMentions] = useState<string[]>([])
   const [isOnboarding, setIsOnboarding] = useState(false)
+  const [isAiLoading, setIsAiLoading] = useState(false)
+  const [internalAiData, setInternalAiData] = useState<any>(null)
+  const [isInternalAiGenerated, setIsInternalAiGenerated] = useState(false)
 
-  // 온보딩 데이터 확인 및 자동 입력
+  // AI 자동 생성 트리거
   useEffect(() => {
-    const step = onboardingService.getStep()
-    if (step === ONBOARDING_STEPS.SCHEDULE_COMPLETED) {
-      const guide = onboardingService.getGuideData()
-      if (guide && guide.guide.example_memo) {
-        const ex = guide.guide.example_memo
-        setFormData(prev => ({
-          ...prev,
-          title: ex.title,
-          content: ex.content,
-        }))
-        setIsOnboarding(true)
+    if (autoGenerate && !internalAiData && !isAiLoading) {
+      const fetchAiData = async () => {
+        setIsAiLoading(true)
+        try {
+          await new Promise(resolve => setTimeout(resolve, 1500))
+          const data = await onboardingService.generateContextualGuide(teamId, 'memo')
+          if (data.example_memo) {
+            setInternalAiData(data.example_memo)
+            setIsInternalAiGenerated(true)
+          }
+        } catch (error) {
+          console.error("AI Generation failed for memo:", error)
+        } finally {
+          setIsAiLoading(false)
+        }
+      }
+      fetchAiData()
+    }
+  }, [autoGenerate, teamId])
+
+  // 온보딩 데이터 또는 AI 생성 데이터 스트리밍 입력
+  useEffect(() => {
+    let targetData = internalAiData;
+    let shouldStream = isInternalAiGenerated;
+
+    if (!targetData) {
+      const step = onboardingService.getStep()
+      if (step === ONBOARDING_STEPS.SCHEDULE_COMPLETED) {
+        const guide = onboardingService.getGuideData()
+        if (guide && guide.guide.example_memo) {
+          targetData = guide.guide.example_memo;
+          setIsOnboarding(true);
+          shouldStream = true;
+        }
       }
     }
-  }, [])
+
+    if (targetData && shouldStream) {
+      setFormData(prev => ({ ...prev, title: "", content: "" }));
+      
+      const title = targetData.title || "";
+      const content = targetData.content || "";
+      let titleIdx = 0;
+      let contentIdx = 0;
+
+      const interval = setInterval(() => {
+        setFormData(prev => {
+          let nextTitle = prev.title;
+          let nextContent = prev.content;
+
+          if (titleIdx < title.length) {
+            nextTitle = title.substring(0, titleIdx + 1);
+            titleIdx++;
+          }
+          if (contentIdx < content.length) {
+            nextContent = content.substring(0, contentIdx + 1);
+            contentIdx++;
+          }
+
+          return {
+            ...prev,
+            title: nextTitle,
+            content: nextContent,
+            schedule_id: targetData.schedule_id ? String(targetData.schedule_id) : prev.schedule_id
+          };
+        });
+
+        if (titleIdx >= title.length && contentIdx >= content.length) {
+          clearInterval(interval);
+        }
+      }, 20);
+
+      return () => clearInterval(interval);
+    } else if (targetData) {
+      setFormData(prev => ({
+        ...prev,
+        title: targetData.title,
+        content: targetData.content,
+        schedule_id: targetData.schedule_id ? String(targetData.schedule_id) : prev.schedule_id
+      }));
+    }
+  }, [internalAiData, isInternalAiGenerated])
 
   useEffect(() => {
     const fetchSchedules = async () => {
@@ -160,7 +233,16 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
             <CardDescription>메모 내용을 입력하세요</CardDescription>
           </CardHeader>
         )}
-        <CardContent className={hideHeader ? "p-0" : ""}>
+        <CardContent className={cn("relative min-h-[400px]", hideHeader ? "p-0" : "")}>
+          {isAiLoading && (
+            <div className="absolute inset-0 z-20 bg-background/40 flex flex-col items-center justify-center rounded-xl animate-in fade-in duration-500">
+              <div className="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center border border-primary/10">
+                <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
+                <p className="text-base font-bold text-primary animate-pulse">AI가 팀의 대화와 일정을 분석 중입니다</p>
+                <p className="text-xs text-muted-foreground mt-2 text-center">관련성 높은 메모 주제를 제안해드릴게요.</p>
+              </div>
+            </div>
+          )}
           {isOnboarding && (
             <div className="mb-6 p-4 rounded-xl bg-primary/10 border border-primary/20 animate-in fade-in slide-in-from-top-2 duration-500">
               <div className="flex items-start gap-3">
@@ -285,14 +367,19 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
               <Button 
                 type="submit" 
                 disabled={isLoading}
-                className="h-14 px-8 rounded-2xl font-black text-lg shadow-lg shadow-primary/20 transition-all active:scale-95"
+                className={cn(
+                  "h-14 px-8 rounded-2xl font-black text-lg shadow-lg transition-all active:scale-95",
+                  (isInternalAiGenerated) ? "bg-primary animate-pulse shadow-primary/30 scale-[1.02]" : "shadow-primary/20"
+                )}
               >
                 {isLoading ? (
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : isInternalAiGenerated ? (
+                  <Sparkles className="h-5 w-5 mr-2" />
                 ) : (
                   <Save className="h-5 w-5 mr-2" />
                 )}
-                메모 저장하기
+                {isInternalAiGenerated ? "AI 추천 메모 저장하기" : "메모 저장하기"}
               </Button>
             </div>
           </form>
