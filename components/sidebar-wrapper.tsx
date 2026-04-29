@@ -23,16 +23,37 @@ import {
 export function SidebarWrapper({ children }: { children: React.ReactNode }) {
   const { currentPage, setCurrentPage, isNotificationModalOpen, setIsNotificationModalOpen } = useNavigation()
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [isRewatch, setIsRewatch] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   useEffect(() => {
-    const token = authService.getToken()
-    setIsLoggedIn(!!token)
+    const checkAuth = () => {
+      const token = authService.getToken()
+      setIsLoggedIn(!!token)
+    }
+    checkAuth()
+
+    // 로그인 상태 변화 감지
+    window.addEventListener('storage', checkAuth)
+    window.addEventListener('auth-change', checkAuth)
+    window.addEventListener('focus', checkAuth)
+    return () => {
+      window.removeEventListener('storage', checkAuth)
+      window.removeEventListener('auth-change', checkAuth)
+      window.removeEventListener('focus', checkAuth)
+    }
   }, [])
 
   useEffect(() => {
-    if (isLoggedIn) {
+    const token = authService.getToken()
+    if (token) {
       const checkOnboarding = async () => {
+        // 회원가입 페이지에서는 가이드를 띄우지 않음 (로그인 처리와 겹칠 수 있음)
+        if (currentPage === PAGES.USER_SIGNUP) {
+          setShowOnboarding(false)
+          return
+        }
+
         try {
           const me = await userService.getMe()
           if (!onboardingService.isCompleted(me.id)) {
@@ -44,7 +65,7 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
       }
       checkOnboarding()
     }
-  }, [isLoggedIn])
+  }, [currentPage, isLoggedIn])
 
   const TEAM_PAGES = [
     PAGES.DASHBOARD,
@@ -57,15 +78,15 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
     PAGES.MEMO_DETAIL,
     PAGES.NOTIFICATION_CREATE,
   ];
-  
+
   const showSidebar = TEAM_PAGES.includes(currentPage);
 
   return (
     <div className="flex min-h-screen">
       {showSidebar && (
-        <AppSidebar 
-          currentPage={currentPage} 
-          onNavigate={setCurrentPage} 
+        <AppSidebar
+          currentPage={currentPage}
+          onNavigate={setCurrentPage}
         />
       )}
       <main className="flex-1 overflow-auto">
@@ -73,19 +94,21 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Global Notification Modal */}
-      <NotificationModal 
-        isOpen={isNotificationModalOpen} 
-        onClose={() => setIsNotificationModalOpen(false)} 
+      <NotificationModal
+        isOpen={isNotificationModalOpen}
+        onClose={() => setIsNotificationModalOpen(false)}
       />
 
       {/* Onboarding Modal */}
       <OnboardingModal
         isOpen={showOnboarding}
+        isRewatch={isRewatch}
         onComplete={() => {
           setShowOnboarding(false)
-          // 필요한 경우 페이지를 새로고침하거나 상태를 업데이트합니다.
-          if (currentPage === PAGES.MAIN) {
-             window.location.reload(); 
+          setIsRewatch(false)
+          // 온보딩 완료 후 새로고침하여 상태 반영 (필요시)
+          if (!isRewatch) {
+            window.location.reload();
           }
         }}
       />
@@ -95,8 +118,8 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
         <div className="fixed bottom-6 right-6 z-50">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button 
-                size="icon" 
+              <Button
+                size="icon"
                 className="h-14 w-14 rounded-full shadow-2xl bg-primary hover:bg-primary/90 text-white border-4 border-background ring-2 ring-primary/20"
               >
                 <HelpCircle className="h-7 w-7" />
@@ -105,9 +128,12 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
             <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl shadow-xl">
               <DropdownMenuLabel className="font-bold px-3 py-2 text-sm opacity-70">도움말 및 지원</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 className="flex items-center gap-2 p-3 rounded-xl cursor-pointer hover:bg-primary/10 transition-colors"
-                onClick={() => setShowOnboarding(true)}
+                onClick={() => {
+                  setIsRewatch(true)
+                  setShowOnboarding(true)
+                }}
               >
                 <div className="bg-primary/20 p-2 rounded-lg">
                   <Sparkles className="h-4 w-4 text-primary" />

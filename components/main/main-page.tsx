@@ -95,8 +95,21 @@ export function MainPage({ onSelectTeam, onNavigate: navigateProp }: MainPagePro
   }
 
   useEffect(() => {
-    const token = authService.getToken()
-    setIsLoggedIn(!!token)
+    const checkAuth = () => {
+      const token = authService.getToken()
+      setIsLoggedIn(!!token)
+    }
+    
+    checkAuth() // 초기 체크
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('auth-change', checkAuth)
+      window.addEventListener('storage', checkAuth)
+      return () => {
+        window.removeEventListener('auth-change', checkAuth)
+        window.removeEventListener('storage', checkAuth)
+      }
+    }
   }, [])
 
   const fetchInbox = useCallback(async () => {
@@ -529,7 +542,7 @@ export function MainPage({ onSelectTeam, onNavigate: navigateProp }: MainPagePro
         <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden border-none shadow-2xl">
           <UserSignUp onSuccess={() => {
             setIsSignupModalOpen(false)
-            setIsLoginModalOpen(true)
+            setIsLoggedIn(true)
           }} />
         </DialogContent>
       </Dialog>

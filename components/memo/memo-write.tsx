@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { FileText, Bold, Italic, List, Link, Save, Users } from "lucide-react"
+import { FileText, Save, Users, Clock, Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,6 +20,7 @@ import { scheduleService, ScheduleResponse } from "@/services/scheduleService"
 import { teamService, TeamMemberResponse } from "@/services/teamService"
 import { onboardingService } from "@/services/onboardingService"
 import { Sparkles } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { PAGES, ONBOARDING_STEPS } from "@/lib/constants"
 
 interface MemoWriteProps {
@@ -27,9 +28,10 @@ interface MemoWriteProps {
   onSuccess?: () => void
   onNavigate?: (page: any) => void
   hideHeader?: boolean
+  autoGenerate?: boolean
 }
 
-export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }: MemoWriteProps) {
+export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false, autoGenerate }: MemoWriteProps) {
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -40,23 +42,117 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
   const [teamMembers, setTeamMembers] = useState<TeamMemberResponse[]>([])
   const [selectedMentions, setSelectedMentions] = useState<string[]>([])
   const [isOnboarding, setIsOnboarding] = useState(false)
+  const [isAiLoading, setIsAiLoading] = useState(false)
+  const [internalAiData, setInternalAiData] = useState<any>(null)
+  const [isInternalAiGenerated, setIsInternalAiGenerated] = useState(false)
+  const [aiRationale, setAiRationale] = useState("")
 
-  // 온보딩 데이터 확인 및 자동 입력
+  // AI 자동 생성 트리거
   useEffect(() => {
-    const step = onboardingService.getStep()
-    if (step === ONBOARDING_STEPS.SCHEDULE_COMPLETED) {
-      const guide = onboardingService.getGuideData()
-      if (guide && guide.guide.example_memo) {
-        const ex = guide.guide.example_memo
-        setFormData(prev => ({
-          ...prev,
-          title: ex.title,
-          content: ex.content,
-        }))
-        setIsOnboarding(true)
+    if (autoGenerate && !internalAiData && !isAiLoading) {
+      const fetchAiData = async () => {
+        setIsAiLoading(true)
+        try {
+          await new Promise(resolve => setTimeout(resolve, 1500))
+          const data = await onboardingService.generateContextualGuide(teamId, 'memo')
+          if (data.example_memo) {
+            setInternalAiData(data.example_memo)
+            setAiRationale(data.rationale || "")
+            setIsInternalAiGenerated(true)
+          }
+        } catch (error) {
+          console.error("AI Generation failed for memo:", error)
+        } finally {
+          setIsAiLoading(false)
+        }
+      }
+      fetchAiData()
+    }
+  }, [autoGenerate, teamId])
+
+  // 온보딩 데이터 또는 AI 생성 데이터 스트리밍 입력
+  useEffect(() => {
+    let targetData = internalAiData;
+    let shouldStream = isInternalAiGenerated;
+
+    if (!targetData) {
+      const step = onboardingService.getStep()
+      if (step === ONBOARDING_STEPS.SCHEDULE_COMPLETED) {
+        const guide = onboardingService.getGuideData()
+        if (guide && guide.guide.example_memo) {
+          targetData = guide.guide.example_memo;
+          setIsOnboarding(true);
+          shouldStream = true;
+        }
       }
     }
-  }, [])
+
+    if (targetData && shouldStream) {
+      setFormData(prev => ({ ...prev, title: "", content: "" }));
+      
+      const title = targetData.title || "";
+      const content = targetData.content || "";
+      let titleIdx = 0;
+      let contentIdx = 0;
+
+      const interval = setInterval(() => {
+        setFormData(prev => {
+          let nextTitle = prev.title;
+          let nextContent = prev.content;
+
+          if (titleIdx < title.length) {
+            nextTitle = title.substring(0, titleIdx + 1);
+            titleIdx++;
+          }
+          if (contentIdx < content.length) {
+            nextContent = content.substring(0, contentIdx + 1);
+            contentIdx++;
+          }
+
+          const scheduleExists = schedules.some(s => s.id === targetData.schedule_id);
+          
+          return {
+            ...prev,
+            title: nextTitle,
+            content: nextContent,
+            schedule_id: (targetData.schedule_id !== undefined && targetData.schedule_id !== null && scheduleExists) 
+              ? String(targetData.schedule_id) 
+              : prev.schedule_id
+          };
+        });
+
+        if (Array.isArray(targetData.mention_ids)) {
+          const validMentionIds = targetData.mention_ids.filter(id => 
+            teamMembers.some(m => m.user_id === id)
+          );
+          setSelectedMentions(validMentionIds.map(String));
+        }
+
+        if (titleIdx >= title.length && contentIdx >= content.length) {
+          clearInterval(interval);
+        }
+      }, 20);
+
+      return () => clearInterval(interval);
+    } else if (targetData) {
+      const scheduleExists = schedules.some(s => s.id === targetData.schedule_id);
+      
+      setFormData(prev => ({
+        ...prev,
+        title: targetData.title || "",
+        content: targetData.content || "",
+        schedule_id: (targetData.schedule_id !== undefined && targetData.schedule_id !== null && scheduleExists) 
+          ? String(targetData.schedule_id) 
+          : prev.schedule_id
+      }));
+      if (Array.isArray(targetData.mention_ids)) {
+        const validMentionIds = targetData.mention_ids.filter(id => 
+          teamMembers.some(m => m.user_id === id)
+        );
+        setSelectedMentions(validMentionIds.map(String));
+      }
+    }
+  }, [internalAiData, isInternalAiGenerated, schedules, teamMembers])
 
   useEffect(() => {
     const fetchSchedules = async () => {
@@ -160,7 +256,16 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
             <CardDescription>메모 내용을 입력하세요</CardDescription>
           </CardHeader>
         )}
-        <CardContent className={hideHeader ? "p-0" : ""}>
+        <CardContent className={cn("relative min-h-[400px]", hideHeader ? "p-0" : "")}>
+          {isAiLoading && (
+            <div className="absolute inset-0 z-20 bg-background/40 flex flex-col items-center justify-center rounded-xl animate-in fade-in duration-500">
+              <div className="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center border border-primary/10">
+                <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
+                <p className="text-base font-bold text-primary animate-pulse">AI가 팀의 대화와 일정을 분석 중입니다</p>
+                <p className="text-xs text-muted-foreground mt-2 text-center">관련성 높은 메모 주제를 제안해드릴게요.</p>
+              </div>
+            </div>
+          )}
           {isOnboarding && (
             <div className="mb-6 p-4 rounded-xl bg-primary/10 border border-primary/20 animate-in fade-in slide-in-from-top-2 duration-500">
               <div className="flex items-start gap-3">
@@ -169,7 +274,7 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm font-bold text-primary flex items-center gap-1">
-                    AI 맞춤형 가이드 (마지막 단계)
+                    AI 맞춤형 가이드
                   </p>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     사용자님의 프로필을 분석하여 <strong>맞춤형 추천 메모</strong>를 미리 입력해두었습니다. <br />
@@ -192,31 +297,49 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
               </div>
             </div>
           )}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2 space-y-2">
-                <Label htmlFor="title">제목</Label>
-                <Input
-                  id="title"
-                  placeholder="메모 제목을 입력하세요"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  required
-                />
+          {isInternalAiGenerated && (
+            <div className="mb-6 p-4 rounded-xl bg-primary/5 border border-primary/10 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
+              <div className="mt-0.5 bg-primary/20 p-1.5 rounded-lg">
+                <Sparkles className="h-4 w-4 text-primary" />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="schedule_id">일정 연결 (선택)</Label>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-primary">AI 추천 메모 분석 결과</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {aiRationale || "현재 팀의 컨텍스트를 분석하여 최적의 메모 주제를 제안합니다."}
+                </p>
+              </div>
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="title" className="font-bold ml-1">메모 제목</Label>
+              <Input
+                id="title"
+                placeholder="메모 제목을 입력하세요"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                required
+                className="h-12 rounded-2xl border-2 focus:border-primary/50 transition-all"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="schedule_id" className="font-bold ml-1">연결 일정 (선택)</Label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+                  <Clock className="h-4 w-4 text-primary" />
+                </div>
                 <Select
                   value={formData.schedule_id || "none"}
                   onValueChange={(value) => setFormData({ ...formData, schedule_id: value === "none" ? "" : value })}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="없음" />
+                  <SelectTrigger className="w-full h-12 pl-11 pr-4 py-3 bg-primary/5 border-2 border-primary/10 rounded-2xl text-sm font-bold text-primary focus:ring-0 focus:border-primary/50 transition-all">
+                    <SelectValue placeholder="선택된 일정 없음" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">없음</SelectItem>
+                  <SelectContent className="rounded-xl border-2">
+                    <SelectItem value="none" className="font-medium text-muted-foreground">선택 안 함</SelectItem>
                     {schedules.map((s) => (
-                      <SelectItem key={s.id} value={String(s.id)}>
+                      <SelectItem key={s.id} value={String(s.id)} className="font-medium">
                         {s.title}
                       </SelectItem>
                     ))}
@@ -264,22 +387,35 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="content">내용</Label>
-              <div className="border rounded-lg">
+              <Label htmlFor="content" className="font-bold ml-1">내용</Label>
+              <div className="rounded-2xl border-2 overflow-hidden focus-within:border-primary/50 transition-all">
                 <Textarea
                   id="content"
                   placeholder="메모 내용을 입력하세요..."
                   value={formData.content}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, content: e.target.value })}
-                  className="border-0 focus-visible:ring-0 min-h-[300px] resize-none"
+                  className="border-0 focus-visible:ring-0 min-h-[300px] resize-none text-base font-medium p-4"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-3">
-              <Button type="submit" disabled={isLoading}>
-                <Save className="h-4 w-4 mr-2" />
-                {isLoading ? "저장 중..." : "저장"}
+            <div className="flex justify-end pt-4">
+              <Button 
+                type="submit" 
+                disabled={isLoading}
+                className={cn(
+                  "h-14 px-8 rounded-2xl font-black text-lg shadow-lg transition-all active:scale-95",
+                  (isInternalAiGenerated) ? "bg-primary animate-pulse shadow-primary/30 scale-[1.02]" : "shadow-primary/20"
+                )}
+              >
+                {isLoading ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : isInternalAiGenerated ? (
+                  <Sparkles className="h-5 w-5 mr-2" />
+                ) : (
+                  <Save className="h-5 w-5 mr-2" />
+                )}
+                {isInternalAiGenerated ? "AI 추천 메모 저장하기" : "메모 저장하기"}
               </Button>
             </div>
           </form>

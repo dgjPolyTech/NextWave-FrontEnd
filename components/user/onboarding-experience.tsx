@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { OnboardingResponse } from "@/services/onboardingService"
-import { ALL_STEPS, OnboardingStep } from "./onboarding-data"
+import { ALL_STEPS, OnboardingStep, OnboardingFeatureGroup } from "./onboarding-data"
 
 // 모듈화된 가상 뷰 임포트
 import { InitialMainView } from "./onboarding-views/initial-main-view"
@@ -26,8 +26,13 @@ import { ScheduleDetailView } from "./onboarding-views/schedule-detail-view"
 import { MemoView } from "./onboarding-views/memo-view"
 import { MemoDetailView } from "./onboarding-views/memo-detail-view"
 
+export type OnboardingMode = 'initial' | 'contextual' | 'rewatch'
+
 interface OnboardingExperienceProps {
   guideData: OnboardingResponse | null
+  mode?: OnboardingMode
+  primaryFeature?: 'team_manage' | 'schedule' | 'memo'
+  targetFeature?: 'schedule' | 'memo' | 'team_manage'
   onClose: () => void
 }
 
@@ -87,7 +92,13 @@ function useStreamingText(text: string, speed: number = 30, startTrigger: boolea
 }
 
 // ── 메인 시뮬레이터 컴포넌트 ──────────────────────────────────
-export function OnboardingExperience({ guideData, onClose }: OnboardingExperienceProps) {
+export function OnboardingExperience({ 
+  guideData, 
+  mode = 'initial', 
+  primaryFeature, 
+  targetFeature,
+  onClose 
+}: OnboardingExperienceProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [view, setView] = useState<'main' | 'dashboard' | 'team_detail' | 'schedule' | 'memo' | 'team_manage' | 'schedule_detail' | 'memo_detail'>('main')
   const [subView, setSubView] = useState<string | undefined>(undefined)
@@ -114,11 +125,95 @@ export function OnboardingExperience({ guideData, onClose }: OnboardingExperienc
   const [memoForm, setMemoForm] = useState({
     title: "",
     content: "",
-    scheduleId: "none"
+    scheduleId: guideData?.guide?.example_memo?.schedule_id?.toString() || "none"
   })
+
+  const [highlightBox, setHighlightBox] = useState<{ top: number; left: number; width: number; height: number } | null>(null)
   
-  const steps = ALL_STEPS
-  const currentStep = steps[currentStepIndex]
+  // 모드별 단계 필터링
+  const filteredSteps = useMemo(() => {
+    if (mode === 'contextual' && targetFeature) {
+      const fGroup = targetFeature === 'team_manage' ? 'manage' : targetFeature
+      return ALL_STEPS.filter(s => s.featureGroup === fGroup)
+    }
+    
+    if (mode === 'initial') {
+      const pFeature = primaryFeature === 'team_manage' ? 'manage' : (primaryFeature || 'schedule')
+      return ALL_STEPS.filter(s => 
+        s.featureGroup === 'initial' || 
+        s.featureGroup === 'dashboard' || 
+        s.featureGroup === pFeature
+      )
+    }
+
+    if (mode === 'rewatch') {
+      // 인트로(NextWave 시작하기 등)와 팀 생성 이후 모든 기능 포함
+      return ALL_STEPS.filter(s => 
+        s.featureGroup !== 'initial' || 
+        (s.part === 'initial') 
+      )
+    }
+    
+    return []
+  }, [mode, primaryFeature, targetFeature])
+
+  const currentStep = filteredSteps[currentStepIndex]
+
+  // 하이라이트 박스 업데이트 로직 개선
+  useEffect(() => {
+    // 단계가 바뀌면 일단 하이라이트 제거
+    setHighlightBox(null)
+
+    if (!currentStep?.targetId || showCelebration) {
+      return
+    }
+
+    let observer: ResizeObserver | null = null;
+    let retryInterval: any = null;
+
+    const updateHighlight = () => {
+      if (!currentStep.targetId) return false
+      const element = document.getElementById(currentStep.targetId)
+      if (element) {
+        const rect = element.getBoundingClientRect()
+        setHighlightBox({
+          top: rect.top + window.scrollY,
+          left: rect.left + window.scrollX,
+          width: rect.width,
+          height: rect.height
+        })
+        
+        // 엘리먼트를 찾았으면 Observer 연결 (중복 방지)
+        if (!observer) {
+          observer = new ResizeObserver(updateHighlight)
+          observer.observe(element)
+        }
+        return true
+      }
+      return false
+    }
+
+    // 초기 업데이트 및 재시도 (지연 로딩 대응)
+    let retryCount = 0
+    retryInterval = setInterval(() => {
+      const success = updateHighlight()
+      retryCount++
+      if (success || retryCount > 20) { // 최대 6초간 시도
+        if (retryInterval) clearInterval(retryInterval)
+      }
+    }, 300)
+
+    window.addEventListener('scroll', updateHighlight)
+    window.addEventListener('resize', updateHighlight)
+
+    return () => {
+      if (retryInterval) clearInterval(retryInterval)
+      if (observer) observer.disconnect()
+      window.removeEventListener('scroll', updateHighlight)
+      window.removeEventListener('resize', updateHighlight)
+    }
+  }, [currentStep, view, subView, showCelebration])
+
 
   // 시스템 예시 정보 (LLM 생성 데이터 시뮬레이션)
   const teamNameFull = useMemo(() => guideData?.user_name ? `${guideData.user_name}의 팀` : "나의 첫 번째 팀", [guideData])
@@ -143,16 +238,52 @@ export function OnboardingExperience({ guideData, onClose }: OnboardingExperienc
   const memoScheduleTitle = virtualSchedules[0]?.title || "주간 팀 회의 🍳"
 
   // 스트리밍 로직 개선: 단계별로 폼 상태 업데이트
-  const { displayedText: streamingName } = useStreamingText(teamNameFull, 40, subView === 'create_form')
-  const { displayedText: streamingTeamDesc, isFinished: isTeamDescFinished } = useStreamingText(teamDescFull, 20, !!streamingName && streamingName.length > 5)
+  const { displayedText: streamingName, isFinished: isNameFinished } = useStreamingText(teamNameFull, 40, subView === 'create_form')
+  const { displayedText: streamingTeamDesc, isFinished: isTeamDescFinished } = useStreamingText(teamDescFull, 20, isNameFinished)
 
-  const { displayedText: streamingSchedTitle } = useStreamingText(scheduleTitleFull, 40, currentStep?.targetId === 'v-schedule-title-field')
-  const { displayedText: streamingSchedTime } = useStreamingText(scheduleTimeFull, 40, currentStep?.targetId === 'v-schedule-time-field')
+  const { displayedText: streamingSchedTitle, isFinished: isSchedTitleFinished } = useStreamingText(scheduleTitleFull, 40, currentStep?.targetId === 'v-schedule-title-field')
+  const { displayedText: streamingSchedTime } = useStreamingText(scheduleTimeFull, 40, isSchedTitleFinished)
   const { displayedText: streamingSchedEndTime } = useStreamingText(scheduleEndTimeFull, 40, currentStep?.targetId === 'v-schedule-endtime-field')
   const { displayedText: streamingSchedDesc, isFinished: isSchedDescFinished } = useStreamingText(scheduleDescFull, 20, currentStep?.targetId === 'v-schedule-desc-field')
 
-  const { displayedText: streamingMemoTitle } = useStreamingText(memoTitleFull, 40, currentStep?.targetId === 'v-memo-title-field')
-  const { displayedText: streamingMemoContent, isFinished: isMemoContentFinished } = useStreamingText(memoContentFull, 20, currentStep?.targetId === 'v-memo-content-field')
+  const { displayedText: streamingMemoTitle, isFinished: isMemoTitleFinished } = useStreamingText(memoTitleFull, 40, currentStep?.targetId === 'v-memo-title-field')
+  const { displayedText: streamingMemoContent, isFinished: isMemoContentFinished } = useStreamingText(memoContentFull, 20, isMemoTitleFinished)
+
+  // 가상 데이터 관리 로직: 사용자가 직접 생성하는 흐름을 방해하지 않도록 개선
+  useEffect(() => {
+    const isScheduleCreateFlow = currentStepIndex <= filteredSteps.findIndex((s: OnboardingStep) => s.targetId === 'v-schedule-submit-btn') && 
+                                 filteredSteps.some((s: OnboardingStep) => s.targetId === 'v-schedule-create-btn')
+    const isMemoCreateFlow = currentStepIndex <= filteredSteps.findIndex((s: OnboardingStep) => s.targetId === 'v-memo-submit-btn') && 
+                             filteredSteps.some((s: OnboardingStep) => s.targetId === 'v-memo-create-btn')
+
+    // 1. 일정 데이터 제어
+    if (isScheduleCreateFlow || isCreatingSchedule) {
+      setVirtualSchedules([])
+    } else if (guideData?.guide?.example_schedule && virtualSchedules.length === 0) {
+      setVirtualSchedules([{
+        id: 1,
+        title: guideData.guide.example_schedule.title,
+        description: guideData.guide.example_schedule.description,
+        start_time: guideData.guide.example_schedule.start_time,
+        end_time: guideData.guide.example_schedule.end_time,
+        status: 'PENDING'
+      }])
+    }
+
+    // 2. 메모 데이터 제어
+    if (isMemoCreateFlow || isCreatingMemo) {
+      setVirtualMemos([])
+    } else if (guideData?.guide?.example_memo && virtualMemos.length === 0) {
+      setVirtualMemos([{
+        id: 0,
+        title: guideData.guide.example_memo.title,
+        content: guideData.guide.example_memo.content,
+        author_name: guideData?.user_name || 'AI 비서',
+        created_at: '방금 전',
+        schedule_title: guideData.guide.example_schedule?.title
+      }])
+    }
+  }, [currentStepIndex, isCreatingSchedule, isCreatingMemo, guideData, filteredSteps, virtualSchedules.length, virtualMemos.length])
 
   // 스트리밍된 텍스트를 폼 상태에 저장 (사라지지 않게)
   useEffect(() => {
@@ -197,12 +328,12 @@ export function OnboardingExperience({ guideData, onClose }: OnboardingExperienc
   }, [currentStepIndex, currentStep])
 
   const handleNext = useCallback(() => {
-    if (currentStepIndex < steps.length - 1) {
+    if (currentStepIndex < filteredSteps.length - 1) {
       setCurrentStepIndex(prev => prev + 1)
     } else {
       setShowCelebration(true)
     }
-  }, [currentStepIndex, steps.length])
+  }, [currentStepIndex, filteredSteps.length])
 
   const handlePrev = () => {
     if (currentStepIndex > 0) {
@@ -247,12 +378,15 @@ export function OnboardingExperience({ guideData, onClose }: OnboardingExperienc
   const handleSidebarClick = (targetId: string) => {
     if (currentStep?.targetId === targetId) {
       if (targetId === 'v-sidebar-memo') setView('memo')
+      if (targetId === 'v-sidebar-schedule') setView('schedule')
+      if (targetId === 'v-sidebar-team-manage') setView('team_manage')
       handleNext()
     }
   }
 
   const handleCreateScheduleClick = () => {
     if (currentStep?.targetId === 'v-schedule-create-btn') {
+      setVirtualSchedules([]) // 생성을 위해 목록 비우기 (index 0 보장)
       setIsCreatingSchedule(true)
       handleNext()
     }
@@ -275,6 +409,7 @@ export function OnboardingExperience({ guideData, onClose }: OnboardingExperienc
 
   const handleCreateMemoClick = () => {
     if (currentStep?.targetId === 'v-memo-create-btn') {
+      setVirtualMemos([]) // 생성을 위해 목록 비우기 (index 0 보장)
       setIsCreatingMemo(true)
       handleNext()
     }
@@ -346,7 +481,7 @@ export function OnboardingExperience({ guideData, onClose }: OnboardingExperienc
         {view === 'main' ? <InitialHeader /> : <TeamHeader view={view} />}
 
         {/* 스크롤 영역 */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 pb-40">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 pb-40 onboarding-scroll-area">
           {view === 'main' && (
             <InitialMainView 
               virtualTeams={virtualTeams} 
@@ -555,7 +690,7 @@ export function OnboardingExperience({ guideData, onClose }: OnboardingExperienc
                       <Clock className="h-4 w-4 text-primary" />
                     </div>
                     <div className="w-full h-12 pl-11 pr-4 py-3 bg-primary/5 border-2 border-primary/10 rounded-2xl text-sm font-bold text-primary flex items-center">
-                      {memoForm.scheduleId === "0" ? memoScheduleTitle : "선택된 일정 없음"}
+                      {memoForm.scheduleId !== "none" ? (guideData?.guide?.example_memo?.schedule_id ? `일정 #${guideData.guide.example_memo.schedule_id}` : memoScheduleTitle) : "선택된 일정 없음"}
                     </div>
                   </div>
                 </div>
@@ -595,7 +730,7 @@ export function OnboardingExperience({ guideData, onClose }: OnboardingExperienc
           <GuideCard 
             step={currentStep} 
             current={currentStepIndex + 1} 
-            total={steps.length}
+            total={filteredSteps.length}
             onPrev={handlePrev}
             onNext={handleNext}
             onClose={onClose}
@@ -711,7 +846,7 @@ function CelebrationOverlay({ user_name, onClose }: { user_name?: string, onClos
           축하합니다, <span className="text-primary">{user_name || '사용자'}</span>님!
         </h2>
         <p className="text-lg text-muted-foreground font-medium mb-10 leading-relaxed">
-          NextWave의 모든 가이드를 완료하셨습니다.<br />
+          가이드를 성공적으로 완료하셨습니다.<br />
           이제 팀원들과 함께 최고의 프로젝트를 만들어보세요!
         </p>
         <Button 
@@ -859,6 +994,8 @@ function Spotlight({ targetId, isOpen }: { targetId?: string, isOpen: boolean })
       const el = document.getElementById(targetId)
       if (el) {
         setRect(el.getBoundingClientRect())
+      } else {
+        setRect(null)
       }
     }
 
