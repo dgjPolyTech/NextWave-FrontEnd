@@ -23,6 +23,7 @@ export interface MemoResponse {
     author_name: string;
     team_id: number;
     schedule_id: number | null;
+    schedule_title: string | null;
     created_at: string;
     updated_at: string;
 }

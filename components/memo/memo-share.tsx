@@ -160,47 +160,45 @@ export function MemoShare({ teamId, onViewMemo }: MemoShareProps) {
         <div className="flex flex-col gap-4">
           {paginatedMemos.length > 0 ? (
             paginatedMemos.map((memo) => (
-              <Card key={memo.id} className="hover:shadow-md transition-shadow">
+              <Card 
+                key={memo.id} 
+                className="hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-primary/20 hover:border-l-primary"
+                onClick={() => onViewMemo?.(memo)}
+              >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-secondary">
-                        <FileText className="h-4 w-4 text-secondary-foreground" />
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <FileText className="h-4 w-4 text-primary" />
                       </div>
                       <div>
-                        <CardTitle className="text-base">{memo.title}</CardTitle>
+                        <CardTitle className="text-base group-hover:text-primary transition-colors">
+                          {memo.title}
+                        </CardTitle>
                         <CardDescription className="line-clamp-1">
                           {memo.content || "내용 없음"}
                         </CardDescription>
                       </div>
                     </div>
-                    {memo.schedule_id && (
-                      <Badge variant="outline">일정 연결됨</Badge>
+                    {memo.schedule_title && (
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-none">
+                        <Clock className="h-3 w-3 mr-1" />
+                        {memo.schedule_title}
+                      </Badge>
                     )}
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-muted/50">
                         <User className="h-3 w-3" />
-                        <span>{memo.author_name}</span>
+                        <span className="font-medium">{memo.author_name}</span>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         <Clock className="h-3 w-3" />
                         <span>{formatDate(memo.created_at)}</span>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 gap-1"
-                        onClick={() => onViewMemo?.(memo)}
-                      >
-                        <Eye className="h-4 w-4" />
-                        자세히 보기
-                      </Button>
                     </div>
                   </div>
                 </CardContent>

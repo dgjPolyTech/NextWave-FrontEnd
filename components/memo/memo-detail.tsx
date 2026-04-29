@@ -133,6 +133,12 @@ export function MemoDetail({ memo: initialMemo, onBack }: MemoDetailProps) {
           <CardTitle className="text-3xl font-bold tracking-tight text-foreground/90">
             {memo.title}
           </CardTitle>
+          {memo.schedule_title && (
+            <div className="mt-4 flex items-center gap-2 text-sm text-primary font-medium bg-primary/5 p-3 rounded-lg border border-primary/10">
+              <Clock className="h-4 w-4" />
+              <span>연결된 일정: {memo.schedule_title}</span>
+            </div>
+          )}
         </CardHeader>
         <Separator className="mx-6" />
         <CardContent className="pt-8 pb-10 px-8">
