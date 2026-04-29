@@ -27,12 +27,12 @@ export default function Home() {
     selectedSchedule,
     setSelectedSchedule,
     selectedTeamId,
-    setSelectedTeamId
+    setSelectedTeamId,
+    navigateToTeam
   } = useNavigation()
 
   const handleSelectTeam = (teamId: number) => {
-    setSelectedTeamId(teamId)
-    setCurrentPage(PAGES.DASHBOARD)
+    navigateToTeam(teamId, PAGES.DASHBOARD)
   }
 
   const handleViewMemo = (memo: any) => {

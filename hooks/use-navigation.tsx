@@ -17,6 +17,7 @@ interface NavigationContextType {
   setIsNotificationModalOpen: (open: boolean) => void
   processedNotificationIds: Set<number>
   addProcessedId: (id: number) => void
+  navigateToTeam: (teamId: number, page?: PageType) => void
 }
 
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined)
@@ -88,6 +89,16 @@ function NavigationInner({ children }: { children: ReactNode }) {
     setSelectedTeamIdInternal(teamId)
   }, [pathname, router])
 
+  // 팀 선택 및 페이지 이동 통합 (버벅임 및 이중 클릭 방지)
+  const navigateToTeam = useCallback((teamId: number, page: PageType = PAGES.DASHBOARD) => {
+    const params = new URLSearchParams(window.location.search)
+    params.set("teamId", teamId.toString())
+    params.set("page", page)
+    router.push(`${pathname}?${params.toString()}`)
+    setSelectedTeamIdInternal(teamId)
+    setCurrentPageInternal(page)
+  }, [pathname, router])
+
   return (
     <NavigationContext.Provider value={{
       currentPage,
@@ -101,7 +112,8 @@ function NavigationInner({ children }: { children: ReactNode }) {
       isNotificationModalOpen,
       setIsNotificationModalOpen,
       processedNotificationIds,
-      addProcessedId
+      addProcessedId,
+      navigateToTeam
     }}>
       {children}
     </NavigationContext.Provider>
