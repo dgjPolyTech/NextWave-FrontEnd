@@ -20,6 +20,7 @@ import {
 import { teamService, TeamMemberResponse, TeamResponse } from "@/services/teamService"
 import { userService } from "@/services/userService"
 import { cn } from "@/lib/utils"
+import { OnboardingTrigger } from "@/components/user/onboarding-trigger"
 
 interface TeamManageProps {
   teamId: number
@@ -194,7 +195,8 @@ export function TeamManage({ teamId }: TeamManageProps) {
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <OnboardingTrigger feature="team_manage" teamId={teamId}>
+      <div className="p-8 max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">팀 관리</h1>
@@ -416,6 +418,7 @@ export function TeamManage({ teamId }: TeamManageProps) {
           </CardContent>
         </Card>
       </div>
-    </div>
+      </div>
+    </OnboardingTrigger>
   )
 }

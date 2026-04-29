@@ -11,9 +11,11 @@ export interface OnboardingSchedule {
 export interface OnboardingMemo {
     title: string;
     content: string;
+    schedule_id?: number;
 }
 
 export interface OnboardingGuideContent {
+    primary_feature: 'team_manage' | 'schedule' | 'memo';
     example_schedule: OnboardingSchedule;
     example_memo: OnboardingMemo;
 }
@@ -21,6 +23,24 @@ export interface OnboardingGuideContent {
 export interface OnboardingResponse {
     user_name: string;
     guide: OnboardingGuideContent;
+}
+
+export interface ContextualExampleResponse {
+    type: 'memo' | 'schedule' | 'all';
+    rationale: string;
+    example_schedule: {
+        title: string;
+        description: string;
+        start_time: string;
+        end_time: string;
+        assignee_ids: number[];
+    } | null;
+    example_memo: {
+        title: string;
+        content: string;
+        mention_ids: number[];
+        schedule_id: number | null;
+    } | null;
 }
 
 const ONBOARDING_DONE_PREFIX = 'onboarding_completed_';
@@ -37,6 +57,27 @@ export const onboardingService = {
     isCompleted: (userId: number): boolean => {
         if (typeof window === 'undefined') return false;
         return !!localStorage.getItem(`${ONBOARDING_DONE_PREFIX}${userId}`);
+    },
+
+    /** 특정 기능 가이드 완료 여부 확인 */
+    isFeatureCompleted: (userId: number, feature: string): boolean => {
+        if (typeof window === 'undefined') return false;
+        return !!localStorage.getItem(`onboarding_seen_${feature}_${userId}`);
+    },
+
+    /** 특정 기능 가이드 완료 표시 */
+    markFeatureCompleted: (userId: number, feature: string) => {
+        if (typeof window === 'undefined') return;
+        localStorage.setItem(`onboarding_seen_${feature}_${userId}`, 'true');
+    },
+
+    /** 컨텍스트 기반 가이드 데이터 생성 */
+    generateContextualGuide: async (teamId: number, part: 'memo' | 'schedule' | null): Promise<ContextualExampleResponse> => {
+        const response = await api.post<ContextualExampleResponse>('/api/v1/ai/generate/contextual', {
+            team_id: teamId,
+            part: part
+        });
+        return response.data;
     },
 
     /** 온보딩 완료 표시 저장 */

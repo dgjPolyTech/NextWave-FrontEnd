@@ -21,7 +21,8 @@ import { Badge } from "@/components/ui/badge"
 import { ScheduleCreateForm } from "./schedule-create"
 import { scheduleService, ScheduleResponse } from "@/services/scheduleService"
 import { onboardingService } from "@/services/onboardingService"
-import { PAGES, ONBOARDING_STEPS } from "@/lib/constants"
+import { PAGES } from "@/lib/constants"
+import { OnboardingTrigger } from "@/components/user/onboarding-trigger"
 
 interface ScheduleViewProps {
   teamId?: number
@@ -33,18 +34,7 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [schedules, setSchedules] = useState<ScheduleResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [onboardingStep, setOnboardingStep] = useState<string>(ONBOARDING_STEPS.IDLE)
-
-  useEffect(() => {
-    setOnboardingStep(onboardingService.getStep())
-  }, [])
-
-  // 온보딩 중 다이얼로그가 열려도 바로 종료하지 않고 유지 (생성 폼에서 처리)
-  useEffect(() => {
-    if (isDialogOpen && onboardingStep === ONBOARDING_STEPS.TEAM_CREATED) {
-      // 로직 제거
-    }
-  }, [isDialogOpen, onboardingStep])
+  // 온보딩 관련 상태 제거
 
   const fetchSchedules = async () => {
     setIsLoading(true)
@@ -67,11 +57,8 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
     setIsDialogOpen(false)
     fetchSchedules()
     
-    // 온보딩 중일 경우 (일정 생성 후) 대시보드로 이동하여 다음 단계(메모) 유도
-    const currentStep = onboardingService.getStep()
-    if (currentStep === ONBOARDING_STEPS.SCHEDULE_COMPLETED && onNavigate) {
-      onNavigate(PAGES.DASHBOARD)
-    }
+    // 온보딩 중일 경우 (일정 생성 후) 대시보드로 이동하여 다음 단계 유도 (기존 로직 유지 가능하나 단순화 가능)
+    // 여기서는 fetch만 하고 트리거 컴포넌트에서 완료 처리를 담당함
   }
 
   const parseISO = (isoString: string) => {
@@ -94,50 +81,25 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
   }
 
   return (
-    <div className="p-8 space-y-8 animate-in fade-in duration-500 relative">
-      {/* 온보딩 배경 어둡게 처리 */}
-      {onboardingStep === 'TEAM_CREATED' && (
-        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] transition-all duration-500" />
-      )}
-
-      {/* 온보딩 안내 레이어 - 버튼 바로 아래에 배치 */}
-      {onboardingStep === 'TEAM_CREATED' && (
-        <div className="absolute top-24 right-8 z-50 animate-in slide-in-from-top-4 duration-500 flex justify-end">
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-2xl border-2 border-primary max-w-xs text-right relative">
-            {/* 화살표 (버튼을 가리킴) */}
-            <div className="absolute -top-3 right-8">
-              <div className="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[15px] border-b-primary" />
-            </div>
-
-            <p className="text-sm font-bold text-foreground">마지막 단계입니다! ✨</p>
-            <p className="text-muted-foreground text-xs mt-1 mb-3 leading-relaxed">
-              위의 **일정 생성** 버튼을 눌러 첫 일정을 등록해보세요. AI 추천 내용이 자동으로 채워져 있습니다!
+    <OnboardingTrigger feature="schedule" teamId={teamId || 0}>
+      <div className="p-8 space-y-8 animate-in fade-in duration-500 relative">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
+              일정 관리
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              등록된 팀 일정을 확인하고 새로운 일정을 계획하세요.
             </p>
-            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => {
-              onboardingService.setStep(ONBOARDING_STEPS.COMPLETED);
-              setOnboardingStep(ONBOARDING_STEPS.COMPLETED);
-            }}>건너뛰기</Button>
           </div>
-        </div>
-      )}
 
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
-            일정 관리
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            등록된 팀 일정을 확인하고 새로운 일정을 계획하세요.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className={`shadow-md hover:shadow-lg transition-all ${onboardingStep === ONBOARDING_STEPS.TEAM_CREATED ? 'ring-4 ring-primary ring-offset-4 animate-pulse relative z-50' : ''}`}>
-                <Plus className="mr-2 h-4 w-4" /> 일정 생성
-              </Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-3">
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="shadow-md hover:shadow-lg transition-all">
+                  <Plus className="mr-2 h-4 w-4" /> 일정 생성
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
               <ScheduleCreateForm teamId={teamId} onSuccess={handleCreateSuccess} />
             </DialogContent>
@@ -210,7 +172,8 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </OnboardingTrigger>
   )
 }
 

@@ -24,6 +24,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { MemoWrite } from "./memo-write"
+import { OnboardingTrigger } from "@/components/user/onboarding-trigger"
 
 interface MemoShareProps {
   teamId: number
@@ -87,7 +88,8 @@ export function MemoShare({ teamId, onViewMemo }: MemoShareProps) {
   }
 
   return (
-    <div className="p-8">
+    <OnboardingTrigger feature="memo" teamId={teamId}>
+      <div className="p-8">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-foreground">팀 메모</h1>
@@ -249,6 +251,7 @@ export function MemoShare({ teamId, onViewMemo }: MemoShareProps) {
           </Button>
         </div>
       )}
-    </div>
+      </div>
+    </OnboardingTrigger>
   )
 }

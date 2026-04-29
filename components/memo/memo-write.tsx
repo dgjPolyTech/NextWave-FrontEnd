@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { FileText, Bold, Italic, List, Link, Save, Users } from "lucide-react"
+import { FileText, Bold, Italic, List, Link, Save, Users, Clock, Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -193,30 +193,35 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2 space-y-2">
-                <Label htmlFor="title">제목</Label>
-                <Input
-                  id="title"
-                  placeholder="메모 제목을 입력하세요"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="schedule_id">일정 연결 (선택)</Label>
+            <div className="space-y-2">
+              <Label htmlFor="title" className="font-bold ml-1">메모 제목</Label>
+              <Input
+                id="title"
+                placeholder="메모 제목을 입력하세요"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                required
+                className="h-12 rounded-2xl border-2 focus:border-primary/50 transition-all"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="schedule_id" className="font-bold ml-1">연결 일정 (선택)</Label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+                  <Clock className="h-4 w-4 text-primary" />
+                </div>
                 <Select
                   value={formData.schedule_id || "none"}
                   onValueChange={(value) => setFormData({ ...formData, schedule_id: value === "none" ? "" : value })}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="없음" />
+                  <SelectTrigger className="w-full h-12 pl-11 pr-4 py-3 bg-primary/5 border-2 border-primary/10 rounded-2xl text-sm font-bold text-primary focus:ring-0 focus:border-primary/50 transition-all">
+                    <SelectValue placeholder="선택된 일정 없음" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">없음</SelectItem>
+                  <SelectContent className="rounded-xl border-2">
+                    <SelectItem value="none" className="font-medium text-muted-foreground">선택 안 함</SelectItem>
                     {schedules.map((s) => (
-                      <SelectItem key={s.id} value={String(s.id)}>
+                      <SelectItem key={s.id} value={String(s.id)} className="font-medium">
                         {s.title}
                       </SelectItem>
                     ))}
@@ -264,22 +269,30 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="content">내용</Label>
-              <div className="border rounded-lg">
+              <Label htmlFor="content" className="font-bold ml-1">내용</Label>
+              <div className="rounded-2xl border-2 overflow-hidden focus-within:border-primary/50 transition-all">
                 <Textarea
                   id="content"
                   placeholder="메모 내용을 입력하세요..."
                   value={formData.content}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, content: e.target.value })}
-                  className="border-0 focus-visible:ring-0 min-h-[300px] resize-none"
+                  className="border-0 focus-visible:ring-0 min-h-[300px] resize-none text-base font-medium p-4"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-3">
-              <Button type="submit" disabled={isLoading}>
-                <Save className="h-4 w-4 mr-2" />
-                {isLoading ? "저장 중..." : "저장"}
+            <div className="flex justify-end pt-4">
+              <Button 
+                type="submit" 
+                disabled={isLoading}
+                className="h-14 px-8 rounded-2xl font-black text-lg shadow-lg shadow-primary/20 transition-all active:scale-95"
+              >
+                {isLoading ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <Save className="h-5 w-5 mr-2" />
+                )}
+                메모 저장하기
               </Button>
             </div>
           </form>

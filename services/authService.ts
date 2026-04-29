@@ -20,6 +20,7 @@ export const authService = {
         // 자동 저장 로직 포함
         if (typeof window !== 'undefined') {
             localStorage.setItem('token', response.data.access_token);
+            window.dispatchEvent(new Event('auth-change'));
         }
 
         return response.data;
@@ -28,6 +29,7 @@ export const authService = {
     logout: () => {
         if (typeof window !== 'undefined') {
             localStorage.removeItem('token');
+            window.dispatchEvent(new Event('auth-change'));
         }
     },
     
