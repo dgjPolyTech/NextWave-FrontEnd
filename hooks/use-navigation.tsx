@@ -2,20 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
-
-export type PageType =
-  | "main"
-  | "dashboard"
-  | "schedule-view"
-  | "memo-write"
-  | "memo-share"
-  | "memo-detail"
-  | "schedule-detail"
-  | "team-create"
-  | "team-invite"
-  | "notification-create"
-  | "notification-rules"
-  | "user-signup"
+import { PAGES, PageType } from "@/lib/constants"
 
 interface NavigationContextType {
   currentPage: PageType
@@ -35,15 +22,15 @@ function NavigationInner({ children }: { children: ReactNode }) {
   const searchParams = useSearchParams()
   const pathname = usePathname()
 
-  const [currentPage, setCurrentPageInternal] = useState<PageType>("main")
+  const [currentPage, setCurrentPageInternal] = useState<PageType>(PAGES.MAIN)
   const [selectedMemo, setSelectedMemo] = useState<any>(null)
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null)
   const [selectedTeamId, setSelectedTeamIdInternal] = useState<number>(0)
 
   // URL 쿼리 파라미터에서 페이지 및 팀 정보 읽기
   useEffect(() => {
-    const pageParam = searchParams.get("page") as PageType
-    if (pageParam && pageParam !== currentPage) {
+    const pageParam = (searchParams.get("page") as PageType) || PAGES.MAIN
+    if (pageParam !== currentPage) {
       setCurrentPageInternal(pageParam)
     }
     

@@ -27,16 +27,9 @@ import { memoService, MemoResponse } from "@/services/memoService"
 import { notificationService, NotificationResponse } from "@/services/notificationService"
 import { userService, UserResponse } from "@/services/userService"
 import { onboardingService } from "@/services/onboardingService"
+import { PAGES, ONBOARDING_STEPS } from "@/lib/constants"
 
-type PageType =
-  | "dashboard"
-  | "schedule-view"
-  | "memo-write"
-  | "memo-share"
-  | "team-create"
-  | "team-invite"
-  | "notification-create"
-  | "notification-rules"
+type PageType = typeof PAGES[keyof typeof PAGES]
 
 interface DashboardProps {
   teamId?: number
@@ -56,7 +49,7 @@ export function Dashboard({ teamId, onNavigate }: DashboardProps) {
     const step = onboardingService.getStep()
     setOnboardingStep(step)
     
-    if (step === 'COMPLETED' && !onboardingService.isFinalMessageShown()) {
+    if (step === ONBOARDING_STEPS.COMPLETED && !onboardingService.isFinalMessageShown()) {
       setOnboardingFinalStep('DASHBOARD_INTRO')
     }
   }, [])
@@ -108,12 +101,12 @@ export function Dashboard({ teamId, onNavigate }: DashboardProps) {
         </div>
       )}
       {/* 온보딩 배경 어둡게 처리 (Spotlight 효과용) */}
-      {(onboardingStep === 'TEAM_CREATED' || onboardingStep === 'SCHEDULE_COMPLETED' || onboardingFinalStep === 'DASHBOARD_INTRO') && (
+      {(onboardingStep === ONBOARDING_STEPS.TEAM_CREATED || onboardingStep === ONBOARDING_STEPS.SCHEDULE_COMPLETED || onboardingFinalStep === 'DASHBOARD_INTRO') && (
         <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px] transition-all duration-500" />
       )}
 
       {/* 온보딩 안내 레이어 (기존 단계용: 일정/메모 생성 유도) */}
-      {(onboardingStep === 'TEAM_CREATED' || onboardingStep === 'SCHEDULE_COMPLETED') && onboardingFinalStep === 'IDLE' && (
+      {(onboardingStep === ONBOARDING_STEPS.TEAM_CREATED || onboardingStep === ONBOARDING_STEPS.SCHEDULE_COMPLETED) && onboardingFinalStep === 'IDLE' && (
         <div className="absolute top-24 right-8 z-50 animate-in slide-in-from-top-4 duration-500">
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-2xl border-2 border-primary max-w-sm text-center relative">
             <div className="absolute -top-3 right-10">
@@ -127,10 +120,10 @@ export function Dashboard({ teamId, onNavigate }: DashboardProps) {
                 </div>
               </div>
               <h3 className="text-lg font-bold mb-2 text-foreground">
-                {onboardingStep === 'TEAM_CREATED' ? '팀 생성을 축하합니다! 🥳' : '일정 생성을 완료했습니다! ✨'}
+                {onboardingStep === ONBOARDING_STEPS.TEAM_CREATED ? '팀 생성을 축하합니다! 🥳' : '일정 생성을 완료했습니다! ✨'}
               </h3>
               <p className="text-muted-foreground text-sm mb-4 leading-relaxed">
-                {onboardingStep === 'TEAM_CREATED' ? (
+                {onboardingStep === ONBOARDING_STEPS.TEAM_CREATED ? (
                   <>이제 팀원들과 공유할 <strong>첫 번째 일정</strong>을 만들어볼까요? <br />오른쪽 상단의 버튼을 클릭해보세요.</>
                 ) : (
                   <>잘하셨어요! 이제 일정에 관련된 <strong>첫 번째 메모</strong>를 작성해볼까요? <br />오른쪽 상단의 버튼을 클릭해보세요.</>
@@ -138,15 +131,15 @@ export function Dashboard({ teamId, onNavigate }: DashboardProps) {
               </p>
               <div className="flex gap-2 justify-center">
                 <Button size="sm" onClick={() => {
-                  if (onboardingStep === 'TEAM_CREATED') onNavigate("schedule-view");
-                  else if (onboardingStep === 'SCHEDULE_COMPLETED') onNavigate("memo-write");
-                  setOnboardingStep('IDLE');
+                  if (onboardingStep === ONBOARDING_STEPS.TEAM_CREATED) onNavigate(PAGES.SCHEDULE_VIEW);
+                  else if (onboardingStep === ONBOARDING_STEPS.SCHEDULE_COMPLETED) onNavigate(PAGES.MEMO_WRITE);
+                  setOnboardingStep(ONBOARDING_STEPS.IDLE);
                 }}>
-                  {onboardingStep === 'TEAM_CREATED' ? '일정 만들러 가기' : '메모 쓰러 가기'}
+                  {onboardingStep === ONBOARDING_STEPS.TEAM_CREATED ? '일정 만들러 가기' : '메모 쓰러 가기'}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => {
-                  onboardingService.setStep('COMPLETED');
-                  setOnboardingStep('COMPLETED');
+                  onboardingService.setStep(ONBOARDING_STEPS.COMPLETED);
+                  setOnboardingStep(ONBOARDING_STEPS.COMPLETED);
                 }}>건너뛰기</Button>
               </div>
             </div>
@@ -220,14 +213,14 @@ export function Dashboard({ teamId, onNavigate }: DashboardProps) {
         </div>
         <div className="flex gap-2">
           <Button
-            onClick={() => onNavigate("schedule-view")}
+            onClick={() => onNavigate(PAGES.SCHEDULE_VIEW)}
             className={`shadow-md hover:shadow-lg transition-all ${onboardingStep === 'TEAM_CREATED' ? 'ring-4 ring-primary ring-offset-4 animate-pulse relative z-50' : ''}`}
           >
             <Plus className="mr-2 h-4 w-4" /> 일정 만들기
           </Button>
           <Button
             variant="outline"
-            onClick={() => onNavigate("memo-write")}
+            onClick={() => onNavigate(PAGES.MEMO_WRITE)}
             className={`hover:bg-accent transition-colors ${onboardingStep === 'SCHEDULE_COMPLETED' ? 'ring-4 ring-primary ring-offset-4 animate-pulse relative z-50 bg-background shadow-lg' : ''}`}
           >
             <FileText className="mr-2 h-4 w-4" /> 메모 작성
@@ -268,7 +261,7 @@ export function Dashboard({ teamId, onNavigate }: DashboardProps) {
               </CardTitle>
               <CardDescription>최근 예정된 일정입니다</CardDescription>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => onNavigate("schedule-view")}>
+            <Button variant="ghost" size="icon" onClick={() => onNavigate(PAGES.SCHEDULE_VIEW)}>
               <ArrowRight className="h-4 w-4" />
             </Button>
           </CardHeader>
@@ -301,7 +294,7 @@ export function Dashboard({ teamId, onNavigate }: DashboardProps) {
               </CardTitle>
               <CardDescription>팀원들과 공유 중인 최근 메모</CardDescription>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => onNavigate("memo-share")}>
+            <Button variant="ghost" size="icon" onClick={() => onNavigate(PAGES.MEMO_SHARE)}>
               <ArrowRight className="h-4 w-4" />
             </Button>
           </CardHeader>

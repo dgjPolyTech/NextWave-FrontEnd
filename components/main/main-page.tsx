@@ -25,6 +25,7 @@ import { teamService, TeamResponse } from "@/services/teamService"
 import { authService } from "@/services/authService"
 import { inboxService, AppNotificationResponse } from "@/services/inboxService"
 import { onboardingService } from "@/services/onboardingService"
+import { PAGES } from "@/lib/constants"
 
 const NOTIFICATION_TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
   schedule: {
@@ -321,7 +322,7 @@ export function MainPage({ onSelectTeam, onNavigate }: MainPageProps) {
                         className="w-full font-semibold gap-2 hover:bg-primary/10 hover:text-primary"
                         onClick={() => {
                           setIsInboxModalOpen(false)
-                          onNavigate("notification-list")
+                          onNavigate(PAGES.NOTIFICATION_LIST)
                         }}
                       >
                         알림 전체 보기
@@ -335,7 +336,7 @@ export function MainPage({ onSelectTeam, onNavigate }: MainPageProps) {
                 <Button
                   variant="outline"
                   className="shadow-lg hover:shadow-xl transition-all h-12 px-6 rounded-xl font-bold border-2"
-                  onClick={() => onNavigate("user-detail")}
+                  onClick={() => onNavigate(PAGES.USER_DETAIL)}
                 >
                   <UserCircle className="mr-2 h-5 w-5" />
                   내 프로필
@@ -373,7 +374,7 @@ export function MainPage({ onSelectTeam, onNavigate }: MainPageProps) {
                 <Button
                   variant="outline"
                   className="shadow-lg hover:shadow-xl transition-all h-12 px-6 rounded-xl font-bold border-2"
-                  onClick={() => onNavigate("user-signup")}
+                  onClick={() => onNavigate(PAGES.USER_SIGNUP)}
                 >
                   <Plus className="mr-2 h-5 w-5" />
                   회원가입

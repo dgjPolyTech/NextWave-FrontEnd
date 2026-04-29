@@ -20,6 +20,7 @@ import { scheduleService, ScheduleResponse } from "@/services/scheduleService"
 import { teamService, TeamMemberResponse } from "@/services/teamService"
 import { onboardingService } from "@/services/onboardingService"
 import { Sparkles } from "lucide-react"
+import { PAGES, ONBOARDING_STEPS } from "@/lib/constants"
 
 interface MemoWriteProps {
   teamId: number
@@ -42,7 +43,7 @@ export function MemoWrite({ teamId, onSuccess, onNavigate }: MemoWriteProps) {
   // 온보딩 데이터 확인 및 자동 입력
   useEffect(() => {
     const step = onboardingService.getStep()
-    if (step === 'SCHEDULE_COMPLETED') {
+    if (step === ONBOARDING_STEPS.SCHEDULE_COMPLETED) {
       const guide = onboardingService.getGuideData()
       if (guide && guide.guide.example_memo) {
         const ex = guide.guide.example_memo
@@ -102,7 +103,7 @@ export function MemoWrite({ teamId, onSuccess, onNavigate }: MemoWriteProps) {
 
       // 온보딩 최종 완료 처리
       if (isOnboarding) {
-        onboardingService.setStep('COMPLETED')
+        onboardingService.setStep(ONBOARDING_STEPS.COMPLETED)
         setIsOnboarding(false)
       }
 
@@ -111,7 +112,7 @@ export function MemoWrite({ teamId, onSuccess, onNavigate }: MemoWriteProps) {
       
       // 온보딩 중일 경우 대시보드로 이동하여 최종 완료 메시지 노출
       if (isOnboarding && onNavigate) {
-        onNavigate("dashboard")
+        onNavigate(PAGES.DASHBOARD)
       } else if (onSuccess) {
         onSuccess()
       }
@@ -167,7 +168,7 @@ export function MemoWrite({ teamId, onSuccess, onNavigate }: MemoWriteProps) {
                       variant="ghost"
                       className="h-7 text-xs text-primary hover:text-primary hover:bg-primary/10 p-0"
                       onClick={() => {
-                        onboardingService.setStep('COMPLETED');
+                        onboardingService.setStep(ONBOARDING_STEPS.COMPLETED);
                         setIsOnboarding(false);
                       }}
                     >

@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge"
 import { ScheduleCreateForm } from "./schedule-create"
 import { scheduleService, ScheduleResponse } from "@/services/scheduleService"
 import { onboardingService } from "@/services/onboardingService"
+import { PAGES, ONBOARDING_STEPS } from "@/lib/constants"
 
 interface ScheduleViewProps {
   teamId?: number
@@ -32,7 +33,7 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [schedules, setSchedules] = useState<ScheduleResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [onboardingStep, setOnboardingStep] = useState<string>('IDLE')
+  const [onboardingStep, setOnboardingStep] = useState<string>(ONBOARDING_STEPS.IDLE)
 
   useEffect(() => {
     setOnboardingStep(onboardingService.getStep())
@@ -40,7 +41,7 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
 
   // 온보딩 중 다이얼로그가 열려도 바로 종료하지 않고 유지 (생성 폼에서 처리)
   useEffect(() => {
-    if (isDialogOpen && onboardingStep === 'TEAM_CREATED') {
+    if (isDialogOpen && onboardingStep === ONBOARDING_STEPS.TEAM_CREATED) {
       // 로직 제거
     }
   }, [isDialogOpen, onboardingStep])
@@ -68,8 +69,8 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
     
     // 온보딩 중일 경우 (일정 생성 후) 대시보드로 이동하여 다음 단계(메모) 유도
     const currentStep = onboardingService.getStep()
-    if (currentStep === 'SCHEDULE_COMPLETED' && onNavigate) {
-      onNavigate("dashboard")
+    if (currentStep === ONBOARDING_STEPS.SCHEDULE_COMPLETED && onNavigate) {
+      onNavigate(PAGES.DASHBOARD)
     }
   }
 
@@ -102,8 +103,8 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
               위의 **일정 생성** 버튼을 눌러 첫 일정을 등록해보세요. AI 추천 내용이 자동으로 채워져 있습니다!
             </p>
             <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => {
-              onboardingService.setStep('COMPLETED');
-              setOnboardingStep('COMPLETED');
+              onboardingService.setStep(ONBOARDING_STEPS.COMPLETED);
+              setOnboardingStep(ONBOARDING_STEPS.COMPLETED);
             }}>건너뛰기</Button>
           </div>
         </div>
@@ -128,7 +129,7 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className={`shadow-md hover:shadow-lg transition-all ${onboardingStep === 'TEAM_CREATED' ? 'ring-4 ring-primary ring-offset-4 animate-pulse relative z-50' : ''}`}>
+              <Button className={`shadow-md hover:shadow-lg transition-all ${onboardingStep === ONBOARDING_STEPS.TEAM_CREATED ? 'ring-4 ring-primary ring-offset-4 animate-pulse relative z-50' : ''}`}>
                 <Plus className="mr-2 h-4 w-4" /> 일정 생성
               </Button>
             </DialogTrigger>

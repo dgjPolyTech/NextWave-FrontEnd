@@ -1,67 +1,106 @@
 "use client"
 
-import { useState } from "react"
-import { ArrowLeft, MessageSquare, User, Clock, Trash2, Send } from "lucide-react"
+import { useState, useEffect } from "react"
+import { ArrowLeft, MessageSquare, User, Clock, Trash2, Send, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-
-interface Comment {
-  id: number
-  author: string
-  content: string
-  createdAt: string
-}
+import { memoService, MemoDetailResponse, CommentResponse } from "@/services/memoService"
 
 interface MemoDetailProps {
   memo: {
     id: number
     title: string
     content: string
-    category: string
-    author: string
-    createdAt: string
+    author_name?: string
+    created_at?: string
   }
   onBack: () => void
 }
 
-const categoryLabels: Record<string, string> = {
-  meeting: "회의록",
-  idea: "아이디어",
-  task: "업무",
-  reference: "참고자료"
-}
-
-export function MemoDetail({ memo, onBack }: MemoDetailProps) {
-  const [comments, setComments] = useState<Comment[]>([
-    {
-      id: 1,
-      author: "이영희",
-      content: "정리해주셔서 감사합니다! 큰 도움이 되네요.",
-      createdAt: "2026-04-20 15:30"
-    }
-  ])
+export function MemoDetail({ memo: initialMemo, onBack }: MemoDetailProps) {
+  const [memo, setMemo] = useState<MemoDetailResponse | null>(null)
+  const [comments, setComments] = useState<CommentResponse[]>([])
   const [newComment, setNewComment] = useState("")
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleAddComment = () => {
-    if (!newComment.trim()) return
-
-    const comment: Comment = {
-      id: Date.now(),
-      author: "나 (사용자)",
-      content: newComment,
-      createdAt: new Date().toISOString().split('T')[0] + " " + new Date().toTimeString().slice(0, 5)
+  const fetchMemoDetail = async () => {
+    try {
+      setIsLoading(true)
+      const data = await memoService.getMemo(initialMemo.id)
+      setMemo(data)
+      setComments(data.comments || [])
+    } catch (err) {
+      console.error("Failed to fetch memo detail:", err)
+    } finally {
+      setIsLoading(false)
     }
-
-    setComments([...comments, comment])
-    setNewComment("")
   }
 
-  const handleDeleteComment = (id: number) => {
-    setComments(comments.filter(c => c.id !== id))
+  useEffect(() => {
+    fetchMemoDetail()
+  }, [initialMemo.id])
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || isSubmitting) return
+
+    setIsSubmitting(true)
+    try {
+      await memoService.createComment(initialMemo.id, { content: newComment })
+      setNewComment("")
+      // 댓글 목록 다시 불러오기
+      const data = await memoService.getComments(initialMemo.id)
+      setComments(data)
+    } catch (err) {
+      console.error("Failed to add comment:", err)
+      alert("댓글 작성에 실패했습니다.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDeleteComment = async (commentId: number) => {
+    if (!confirm("댓글을 삭제하시겠습니까?")) return
+    try {
+      await memoService.deleteComment(initialMemo.id, commentId)
+      setComments(comments.filter(c => c.id !== commentId))
+    } catch (err) {
+      console.error("Failed to delete comment:", err)
+      alert("댓글 삭제에 실패했습니다.")
+    }
+  }
+
+  const formatDate = (iso: string | undefined) => {
+    if (!iso) return ""
+    return new Date(iso).toLocaleString("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">메모를 불러오는 중...</p>
+      </div>
+    )
+  }
+
+  if (!memo) {
+    return (
+      <div className="p-8 text-center">
+        <p>메모를 찾을 수 없습니다.</p>
+        <Button onClick={onBack} variant="outline" className="mt-4">돌아가기</Button>
+      </div>
+    )
   }
 
   return (
@@ -74,21 +113,20 @@ export function MemoDetail({ memo, onBack }: MemoDetailProps) {
         <ArrowLeft className="mr-2 h-4 w-4" />
         목록으로 돌아가기
       </Button>
-
       <Card className="mb-8 border-none shadow-lg bg-card/50 backdrop-blur-sm">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between mb-2">
             <Badge variant="secondary" className="px-3 py-1 text-xs font-medium">
-              {categoryLabels[memo.category] || memo.category}
+              메모 상세
             </Badge>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1.5">
                 <User className="h-4 w-4" />
-                <span>{memo.author}</span>
+                <span>{memo.author_name}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <Clock className="h-4 w-4" />
-                <span>{memo.createdAt}</span>
+                <span>{formatDate(memo.created_at)}</span>
               </div>
             </div>
           </div>
@@ -120,14 +158,14 @@ export function MemoDetail({ memo, onBack }: MemoDetailProps) {
                   <div key={comment.id} className="p-6 flex gap-4 group hover:bg-muted/30 transition-colors">
                     <Avatar className="h-10 w-10 shrink-0 border-2 border-background">
                       <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                        {comment.author.charAt(0)}
+                        {comment.author_name?.charAt(0) || "U"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm">{comment.author}</span>
-                          <span className="text-xs text-muted-foreground">{comment.createdAt}</span>
+                          <span className="font-semibold text-sm">{comment.author_name}</span>
+                          <span className="text-xs text-muted-foreground">{formatDate(comment.created_at)}</span>
                         </div>
                         <Button 
                           variant="ghost" 
@@ -162,13 +200,15 @@ export function MemoDetail({ memo, onBack }: MemoDetailProps) {
                   onChange={(e) => setNewComment(e.target.value)}
                   className="bg-background/80 border-none shadow-sm focus-visible:ring-primary/30"
                   onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
+                  disabled={isSubmitting}
                 />
               </div>
               <Button 
                 onClick={handleAddComment} 
                 className="shadow-sm hover:shadow-md transition-all px-4"
+                disabled={isSubmitting}
               >
-                <Send className="h-4 w-4 mr-2" />
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
                 등록
               </Button>
             </div>

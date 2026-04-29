@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { userService } from "@/services/userService"
 import { useToast } from "@/components/ui/use-toast"
 import { useNavigation } from "@/hooks/use-navigation"
+import { PAGES } from "@/lib/constants"
 
 export function UserUpdate() {
     const { setCurrentPage } = useNavigation()

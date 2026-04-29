@@ -2,21 +2,22 @@
 
 import { useNavigation } from "@/hooks/use-navigation"
 import { AppSidebar } from "./app-sidebar"
+import { PAGES } from "@/lib/constants"
 
 export function SidebarWrapper({ children }: { children: React.ReactNode }) {
   const { currentPage, setCurrentPage } = useNavigation()
 
   const TEAM_PAGES = [
-    "dashboard",
-    "team-create",
-    "team-invite",
-    "schedule-view",
-    "schedule-detail",
-    "memo-write",
-    "memo-share",
-    "memo-detail",
-    "notification-create",
-    "notification-rules"
+    PAGES.DASHBOARD,
+    PAGES.TEAM_CREATE,
+    PAGES.TEAM_INVITE,
+    PAGES.SCHEDULE_VIEW,
+    PAGES.SCHEDULE_DETAIL,
+    PAGES.MEMO_WRITE,
+    PAGES.MEMO_SHARE,
+    PAGES.MEMO_DETAIL,
+    PAGES.NOTIFICATION_CREATE,
+    PAGES.NOTIFICATION_RULES
   ];
   
   const showSidebar = TEAM_PAGES.includes(currentPage);

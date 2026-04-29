@@ -17,6 +17,7 @@ import { NotificationList } from "@/components/notification/notification-list"
 import { UserSignUp } from "@/components/user/user-signup"
 import { UserDetail } from "@/components/user/user-detail"
 import { UserUpdate } from "@/components/user/user-update"
+import { PAGES } from "@/lib/constants"
 
 export default function Home() {
   const {
@@ -32,56 +33,56 @@ export default function Home() {
 
   const handleSelectTeam = (teamId: number) => {
     setSelectedTeamId(teamId)
-    setCurrentPage("dashboard")
+    setCurrentPage(PAGES.DASHBOARD)
   }
 
   const handleViewMemo = (memo: any) => {
     setSelectedMemo(memo)
-    setCurrentPage("memo-detail")
+    setCurrentPage(PAGES.MEMO_DETAIL)
   }
 
   const handleViewSchedule = (schedule: any) => {
     setSelectedSchedule(schedule)
-    setCurrentPage("schedule-detail")
+    setCurrentPage(PAGES.SCHEDULE_DETAIL)
   }
 
   const renderContent = () => {
     switch (currentPage) {
-      case "main":
+      case PAGES.MAIN:
         return <MainPage onSelectTeam={handleSelectTeam} onNavigate={setCurrentPage} />
-      case "dashboard":
+      case PAGES.DASHBOARD:
         return <Dashboard teamId={selectedTeamId} onNavigate={setCurrentPage} />
-      case "schedule-view":
+      case PAGES.SCHEDULE_VIEW:
         return <ScheduleView teamId={selectedTeamId} onSelectSchedule={handleViewSchedule} onNavigate={setCurrentPage} />
-      case "schedule-detail":
-        return <ScheduleDetail schedule={selectedSchedule} onBack={() => setCurrentPage("schedule-view")} />
-      case "memo-write":
-        return <MemoWrite teamId={selectedTeamId} onSuccess={() => setCurrentPage("memo-share")} onNavigate={setCurrentPage} />
-      case "memo-share":
+      case PAGES.SCHEDULE_DETAIL:
+        return <ScheduleDetail schedule={selectedSchedule} onBack={() => setCurrentPage(PAGES.SCHEDULE_VIEW)} />
+      case PAGES.MEMO_WRITE:
+        return <MemoWrite teamId={selectedTeamId} onSuccess={() => setCurrentPage(PAGES.MEMO_SHARE)} onNavigate={setCurrentPage} />
+      case PAGES.MEMO_SHARE:
         return <MemoShare teamId={selectedTeamId} onViewMemo={handleViewMemo} />
-      case "memo-detail":
-        return <MemoDetail memo={selectedMemo} onBack={() => setCurrentPage("memo-share")} />
-      case "team-create":
-        return <TeamCreate onSuccess={() => setCurrentPage("main")} />
-      case "team-invite":
+      case PAGES.MEMO_DETAIL:
+        return <MemoDetail memo={selectedMemo} onBack={() => setCurrentPage(PAGES.MEMO_SHARE)} />
+      case PAGES.TEAM_CREATE:
+        return <TeamCreate onSuccess={() => setCurrentPage(PAGES.MAIN)} />
+      case PAGES.TEAM_INVITE:
         return <TeamInvite teamId={selectedTeamId} />
-      case "notification-create":
+      case PAGES.NOTIFICATION_CREATE:
         return <NotificationCreate teamId={selectedTeamId} />
-      case "notification-rules":
+      case PAGES.NOTIFICATION_RULES:
         return <NotificationRules teamId={selectedTeamId} />
-      case "notification-list":
+      case PAGES.NOTIFICATION_LIST:
         return <NotificationList />
-      case "user-signup":
+      case PAGES.USER_SIGNUP:
         return <UserSignUp onSuccess={(teamId) => {
           if (teamId) {
             handleSelectTeam(teamId)
           } else {
-            setCurrentPage("main")
+            setCurrentPage(PAGES.MAIN)
           }
         }} />
-      case "user-detail":
+      case PAGES.USER_DETAIL:
         return <UserDetail />
-      case "user-update":
+      case PAGES.USER_UPDATE:
         return <UserUpdate />
       default:
         return <MainPage onSelectTeam={handleSelectTeam} onNavigate={setCurrentPage} />
