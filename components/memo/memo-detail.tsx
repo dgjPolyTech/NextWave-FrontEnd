@@ -105,9 +105,9 @@ export function MemoDetail({ memo: initialMemo, onBack }: MemoDetailProps) {
 
   return (
     <div className="p-8 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <Button 
-        variant="ghost" 
-        onClick={onBack} 
+      <Button
+        variant="ghost"
+        onClick={onBack}
         className="mb-6 hover:bg-secondary transition-colors"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
@@ -173,9 +173,9 @@ export function MemoDetail({ memo: initialMemo, onBack }: MemoDetailProps) {
                           <span className="font-semibold text-sm">{comment.author_name}</span>
                           <span className="text-xs text-muted-foreground">{formatDate(comment.created_at)}</span>
                         </div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
                           onClick={() => handleDeleteComment(comment.id)}
                         >
@@ -209,8 +209,8 @@ export function MemoDetail({ memo: initialMemo, onBack }: MemoDetailProps) {
                   disabled={isSubmitting}
                 />
               </div>
-              <Button 
-                onClick={handleAddComment} 
+              <Button
+                onClick={handleAddComment}
                 className="shadow-sm hover:shadow-md transition-all px-4"
                 disabled={isSubmitting}
               >

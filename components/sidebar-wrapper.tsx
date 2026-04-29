@@ -10,14 +10,13 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
   const TEAM_PAGES = [
     PAGES.DASHBOARD,
     PAGES.TEAM_CREATE,
-    PAGES.TEAM_INVITE,
+    PAGES.TEAM_MANAGE,
     PAGES.SCHEDULE_VIEW,
     PAGES.SCHEDULE_DETAIL,
     PAGES.MEMO_WRITE,
     PAGES.MEMO_SHARE,
     PAGES.MEMO_DETAIL,
     PAGES.NOTIFICATION_CREATE,
-    PAGES.NOTIFICATION_RULES
   ];
   
   const showSidebar = TEAM_PAGES.includes(currentPage);

@@ -12,7 +12,7 @@ export const PAGES = {
   MEMO_SHARE: "memo-share",
   MEMO_DETAIL: "memo-detail",
   TEAM_CREATE: "team-create",
-  TEAM_INVITE: "team-invite",
+  TEAM_MANAGE: "team-manage",
   NOTIFICATION_CREATE: "notification-create",
   NOTIFICATION_RULES: "notification-rules",
   NOTIFICATION_LIST: "notification-list",

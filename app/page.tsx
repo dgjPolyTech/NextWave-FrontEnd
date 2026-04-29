@@ -10,9 +10,8 @@ import { MemoWrite } from "@/components/memo/memo-write"
 import { MemoShare } from "@/components/memo/memo-share"
 import { MemoDetail } from "@/components/memo/memo-detail"
 import { TeamCreate } from "@/components/team/team-create"
-import { TeamInvite } from "@/components/team/team-invite"
+import { TeamManage } from "@/components/team/team-manage"
 import { NotificationCreate } from "@/components/notification/notification-create"
-import { NotificationRules } from "@/components/notification/notification-rules"
 import { NotificationList } from "@/components/notification/notification-list"
 import { UserSignUp } from "@/components/user/user-signup"
 import { UserDetail } from "@/components/user/user-detail"
@@ -64,12 +63,10 @@ export default function Home() {
         return <MemoDetail memo={selectedMemo} onBack={() => setCurrentPage(PAGES.MEMO_SHARE)} />
       case PAGES.TEAM_CREATE:
         return <TeamCreate onSuccess={() => setCurrentPage(PAGES.MAIN)} />
-      case PAGES.TEAM_INVITE:
-        return <TeamInvite teamId={selectedTeamId} />
+      case PAGES.TEAM_MANAGE:
+        return <TeamManage teamId={selectedTeamId} />
       case PAGES.NOTIFICATION_CREATE:
         return <NotificationCreate teamId={selectedTeamId} />
-      case PAGES.NOTIFICATION_RULES:
-        return <NotificationRules teamId={selectedTeamId} />
       case PAGES.NOTIFICATION_LIST:
         return <NotificationList />
       case PAGES.USER_SIGNUP:

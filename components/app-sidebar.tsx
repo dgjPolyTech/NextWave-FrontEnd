@@ -7,20 +7,13 @@ import {
   Users,
   Bell,
   Home,
-  ChevronDown,
   PanelLeft,
-  Menu,
   Sparkles,
   User as UserIcon
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { PageType, PAGES } from "@/lib/constants"
 import { Button } from "@/components/ui/button"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
 import {
   Tooltip,
   TooltipContent,
@@ -122,15 +115,12 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
             isCollapsed={isCollapsed}
           />
 
-          <SidebarCollapsibleItem
+          <SidebarNavItem
             icon={Users}
-            label="팀 협업"
+            label="팀 관리"
+            isActive={currentPage === PAGES.TEAM_MANAGE}
+            onClick={() => onNavigate(PAGES.TEAM_MANAGE)}
             isCollapsed={isCollapsed}
-            items={[
-              // { label: "팀 생성", active: currentPage === "team-create", onClick: () => onNavigate("team-create") },
-              { label: "팀 초대", active: currentPage === PAGES.TEAM_INVITE, onClick: () => onNavigate(PAGES.TEAM_INVITE) },
-              { label: "알림 설정", active: currentPage === PAGES.NOTIFICATION_RULES, onClick: () => onNavigate(PAGES.NOTIFICATION_RULES) },
-            ]}
           />
         </nav>
 
@@ -186,61 +176,5 @@ function SidebarNavItem({ icon: Icon, label, isActive, onClick, isCollapsed }: a
   }
 
   return content
-}
-
-function SidebarCollapsibleItem({ icon: Icon, label, items, isCollapsed }: any) {
-  const [isOpen, setIsOpen] = useState(false)
-
-  if (isCollapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            className="w-full h-10 w-10 mx-auto justify-center p-0 text-sidebar-foreground opacity-80 hover:opacity-100 hover:bg-sidebar-accent"
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            <Icon className="h-5 w-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="right">
-          {label}
-        </TooltipContent>
-      </Tooltip>
-    )
-  }
-
-  return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <CollapsibleTrigger asChild>
-        <Button
-          variant="ghost"
-          className="w-full justify-between text-sidebar-foreground opacity-80 hover:opacity-100 hover:bg-sidebar-accent px-3"
-        >
-          <span className="flex items-center gap-3">
-            <Icon className="h-5 w-5" />
-            <span className="truncate">{label}</span>
-          </span>
-          <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
-        </Button>
-      </CollapsibleTrigger>
-      <CollapsibleContent className="pl-11 space-y-1 mt-1 transition-all">
-        {items.map((item: any, idx: number) => (
-          <Button
-            key={idx}
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "w-full justify-start text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors",
-              item.active && "text-sidebar-foreground font-medium bg-sidebar-accent/50"
-            )}
-            onClick={item.onClick}
-          >
-            {item.label}
-          </Button>
-        ))}
-      </CollapsibleContent>
-    </Collapsible>
-  )
 }
 
