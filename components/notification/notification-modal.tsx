@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import {
   Bell, Calendar, FileText, Mail, Shield, Check, X,
-  RefreshCw, Inbox, MessageSquare
+  RefreshCw, Inbox, MessageSquare, CheckCircle2
 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -30,15 +30,25 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; bg: string; label: st
 const DEFAULT_CFG = { icon: <Shield className="h-4 w-4" />, bg: "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400", label: "알림" }
 
 function formatTime(isoStr: string): string {
-  const diff = Date.now() - new Date(isoStr).getTime()
-  const m = Math.floor(diff / 60000)
-  if (m < 1) return "방금 전"
-  if (m < 60) return `${m}분 전`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}시간 전`
-  const d = Math.floor(h / 24)
-  if (d < 7) return `${d}일 전`
-  return new Date(isoStr).toLocaleDateString("ko-KR")
+  if (!isoStr) return "";
+  
+  // 백엔드에서 보내는 시간이 UTC 기준이나 'Z'가 없어 현지 시간(KST)으로 오해받는 경우 처리
+  let normalizedStr = isoStr.replace(" ", "T");
+  if (normalizedStr.includes("T") && !normalizedStr.endsWith("Z") && !normalizedStr.includes("+")) {
+    normalizedStr += "Z";
+  }
+  
+  const date = new Date(normalizedStr);
+  const diff = Date.now() - date.getTime();
+  const m = Math.floor(diff / 60000);
+  
+  if (m < 1) return "방금 전";
+  if (m < 60) return `${m}분 전`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}시간 전`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}일 전`;
+  return date.toLocaleDateString("ko-KR");
 }
 
 export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
@@ -109,7 +119,8 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
     }
   }
 
-  const filteredNotifications = notifications.filter(n => !processedNotificationIds.has(n.id))
+  // 전체 알림함에서는 필터링하지 않고 모두 보여주되, 수락/거절 버튼만 제어함
+  const allNotifications = notifications;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -132,7 +143,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
               <RefreshCw className="h-8 w-8 animate-spin text-primary/40" />
               <p className="text-sm text-muted-foreground">알림을 불러오는 중...</p>
             </div>
-          ) : filteredNotifications.length === 0 ? (
+          ) : allNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
               <div className="p-4 rounded-full bg-muted">
                 <Inbox className="h-8 w-8 text-muted-foreground/40" />
@@ -143,7 +154,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
               </div>
             </div>
           ) : (
-            filteredNotifications.map((notif) => {
+            allNotifications.map((notif) => {
               const cfg = TYPE_CONFIG[notif.type] ?? DEFAULT_CFG
               const isTeamInvite = notif.type === "TEAM_INVITE"
               const isActioning = actionLoading === notif.id
@@ -185,25 +196,34 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
 
                     {isTeamInvite && (
                       <div className="flex gap-2 mt-3" onClick={e => e.stopPropagation()}>
-                        <Button
-                          size="sm"
-                          className="h-8 gap-1.5 font-semibold"
-                          onClick={() => handleAccept(notif)}
-                          disabled={isActioning}
-                        >
-                          {isActioning ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                          수락
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 gap-1.5 font-semibold text-destructive border-destructive/30 hover:bg-destructive/10"
-                          onClick={() => handleReject(notif)}
-                          disabled={isActioning}
-                        >
-                          {isActioning ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
-                          거절
-                        </Button>
+                        {processedNotificationIds.has(notif.id) ? (
+                          <Badge variant="outline" className="h-8 px-3 gap-1.5 border-dashed text-muted-foreground">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            처리 완료
+                          </Badge>
+                        ) : (
+                          <>
+                            <Button
+                              size="sm"
+                              className="h-8 gap-1.5 font-semibold"
+                              onClick={() => handleAccept(notif)}
+                              disabled={isActioning}
+                            >
+                              {isActioning ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                              수락
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 gap-1.5 font-semibold text-destructive border-destructive/30 hover:bg-destructive/10"
+                              onClick={() => handleReject(notif)}
+                              disabled={isActioning}
+                            >
+                              {isActioning ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                              거절
+                            </Button>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>

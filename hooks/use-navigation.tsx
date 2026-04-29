@@ -33,8 +33,27 @@ function NavigationInner({ children }: { children: ReactNode }) {
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
   const [processedNotificationIds, setProcessedNotificationIds] = useState<Set<number>>(new Set())
 
+  // 초기 로드 시 localStorage에서 복구
+  useEffect(() => {
+    const saved = localStorage.getItem('processed_notifications')
+    if (saved) {
+      try {
+        const ids = JSON.parse(saved)
+        if (Array.isArray(ids)) {
+          setProcessedNotificationIds(new Set(ids))
+        }
+      } catch (e) {
+        console.error("Failed to load processed notifications", e)
+      }
+    }
+  }, [])
+
   const addProcessedId = useCallback((id: number) => {
-    setProcessedNotificationIds(prev => new Set(prev).add(id))
+    setProcessedNotificationIds(prev => {
+      const next = new Set(prev).add(id)
+      localStorage.setItem('processed_notifications', JSON.stringify(Array.from(next)))
+      return next
+    })
   }, [])
 
   // URL 쿼리 파라미터에서 페이지 및 팀 정보 읽기
