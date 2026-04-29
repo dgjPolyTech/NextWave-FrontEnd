@@ -242,57 +242,13 @@ export function ScheduleDetail({ schedule: initialSchedule, onBack }: ScheduleDe
               </div>
             </div>
 
-            {/* Right Column: Assignees & Reminders */}
+            {/* Right Column: Assignees */}
             <div className="space-y-10">
               <div className="space-y-5">
                 <h3 className="text-xs font-black text-muted-foreground/40 uppercase tracking-[0.2em] flex items-center gap-2">
-                  <Users className="h-4 w-4" /> Assignees
+                  <Users className="h-4 w-4" /> 담당자 설정
                 </h3>
                 <ScheduleAssigneeManager scheduleId={schedule.id} teamId={schedule.team_id} />
-              </div>
-
-              <div className="space-y-5">
-                <h3 className="text-xs font-black text-muted-foreground/40 uppercase tracking-[0.2em] flex items-center gap-2">
-                  <BellPlus className="h-4 w-4" /> Personal Reminders
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex gap-2">
-                    <Input 
-                      type="datetime-local" 
-                      className="rounded-xl h-11 border-border/40 bg-muted/20 focus:bg-background transition-all"
-                      value={newReminder}
-                      onChange={(e) => setNewReminder(e.target.value)}
-                    />
-                    <Button className="rounded-xl h-11 px-4 gap-2 shrink-0 shadow-lg shadow-primary/20" onClick={handleAddReminder}>
-                      <Plus className="h-4 w-4" /> 추가
-                    </Button>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    {reminders.length > 0 ? reminders.map(r => (
-                      <div key={r.id} className="flex items-center justify-between p-4 rounded-2xl bg-muted/10 border border-border/20 group hover:bg-muted/20 transition-all">
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
-                            <Clock className="h-4 w-4" />
-                          </div>
-                          <span className="text-sm font-bold">{formatDateTime(r.remind_at)}</span>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
-                          onClick={() => handleDeleteReminder(r.id)}
-                        >
-                          <BellOff className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )) : (
-                      <p className="text-xs text-muted-foreground/60 italic text-center py-4 bg-muted/5 rounded-2xl border border-dashed">
-                        설정된 리마인더가 없습니다.
-                      </p>
-                    )}
-                  </div>
-                </div>
               </div>
             </div>
 

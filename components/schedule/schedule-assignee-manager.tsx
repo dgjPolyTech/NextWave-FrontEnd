@@ -85,7 +85,7 @@ export function ScheduleAssigneeManager({ scheduleId, teamId }: ScheduleAssignee
 
       <div className="border rounded-2xl overflow-hidden bg-muted/20">
         <div className="bg-muted/50 px-4 py-2 border-b">
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">팀 멤버 배정</p>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">담당자 설정</p>
         </div>
         <div className="max-h-48 overflow-y-auto divide-y">
           {teamMembers.map((member: TeamMemberResponse) => {
@@ -123,7 +123,7 @@ export function ScheduleAssigneeManager({ scheduleId, teamId }: ScheduleAssignee
                   ) : (
                     <>
                       <UserPlus className="h-3.5 w-3.5" />
-                      배정
+                      추가
                     </>
                   )}
                 </Button>
