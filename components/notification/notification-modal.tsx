@@ -96,7 +96,10 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
       addProcessedId(notif.id)
       setNotifications(prev => prev.filter(n => n.id !== notif.id))
     } catch (err: any) {
-      toast({ title: "수락 실패", description: err.response?.data?.detail || err.message, variant: "destructive" })
+      const description = err.response?.status === 403 
+        ? "게스트 멤버는 팀 초대를 수락할 권한이 없습니다." 
+        : (err.response?.data?.detail || err.message);
+      toast({ title: "수락 실패", description, variant: "destructive" })
     } finally {
       setActionLoading(null)
     }
@@ -113,7 +116,10 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
       addProcessedId(notif.id)
       setNotifications(prev => prev.filter(n => n.id !== notif.id))
     } catch (err: any) {
-      toast({ title: "거절 실패", description: err.response?.data?.detail || err.message, variant: "destructive" })
+      const description = err.response?.status === 403 
+        ? "게스트 멤버는 팀 초대를 거절할 권한이 없습니다." 
+        : (err.response?.data?.detail || err.message);
+      toast({ title: "거절 실패", description, variant: "destructive" })
     } finally {
       setActionLoading(null)
     }

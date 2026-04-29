@@ -65,9 +65,13 @@ export function ScheduleDetail({ schedule: initialSchedule, onBack }: ScheduleDe
       await scheduleService.deleteSchedule(schedule.id)
       alert("일정이 삭제되었습니다.")
       onBack()
-    } catch (err) {
+    } catch (err: any) {
       console.error("Delete failed:", err)
-      alert("삭제에 실패했습니다.")
+      if (err.response?.status === 403) {
+        alert("게스트 멤버는 일정을 삭제할 권한이 없습니다.")
+      } else {
+        alert("삭제에 실패했습니다.")
+      }
     } finally {
       setIsDeleting(false)
     }
@@ -79,8 +83,11 @@ export function ScheduleDetail({ schedule: initialSchedule, onBack }: ScheduleDe
     try {
       const updated = await scheduleService.updateStatus(schedule.id, { status: nextStatus })
       setSchedule(updated)
-    } catch (err) {
+    } catch (err: any) {
       console.error("Status update failed:", err)
+      if (err.response?.status === 403) {
+        alert("게스트 멤버는 일정 상태를 변경할 권한이 없습니다.")
+      }
     } finally {
       setIsUpdating(false)
     }
@@ -96,9 +103,13 @@ export function ScheduleDetail({ schedule: initialSchedule, onBack }: ScheduleDe
       })
       setReminders((prev: NotificationResponse[]) => [...prev, created])
       setNewReminder("")
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to add reminder:", err)
-      alert("리마인더 추가에 실패했습니다.")
+      if (err.response?.status === 403) {
+        alert("게스트 멤버는 리마인더를 추가할 권한이 없습니다.")
+      } else {
+        alert("리마인더 추가에 실패했습니다.")
+      }
     }
   }
 
@@ -106,8 +117,13 @@ export function ScheduleDetail({ schedule: initialSchedule, onBack }: ScheduleDe
     try {
       await notificationService.deleteNotification(id)
       setReminders((prev: NotificationResponse[]) => prev.filter((r: NotificationResponse) => r.id !== id))
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to delete reminder:", err)
+      if (err.response?.status === 403) {
+        alert("게스트 멤버는 리마인더를 삭제할 권한이 없습니다.")
+      } else {
+        alert("리마인더 삭제에 실패했습니다.")
+      }
     }
   }
 

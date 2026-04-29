@@ -63,8 +63,11 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
       try {
         const data = await scheduleService.getTeamSchedules(teamId)
         setSchedules(data)
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to fetch schedules for memo:", err)
+        if (err.response?.status === 403) {
+          alert("게스트 멤버는 스케줄을 조회할 권한이 없습니다.")
+        }
       }
     }
     fetchSchedules()
@@ -76,8 +79,11 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
       try {
         const members = await teamService.getMembers(teamId)
         setTeamMembers(members)
-      } catch (error) {
-        console.error("Failed to fetch team members:", error)
+      } catch (err: any) {
+        console.error("Failed to fetch team members:", err)
+        if (err.response?.status === 403) {
+          alert("게스트 멤버는 팀 멤버 목록을 조회할 권한이 없습니다.")
+        }
       }
     }
     fetchTeamMembers()
@@ -124,9 +130,11 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
         ? detail.map((d: any) => `${d.loc?.join(".")}: ${d.msg}`).join("\n")
         : detail || error.message || "Unknown error"
       if (error.response?.status === 401) {
-        alert("Authentication required. Please login first.")
+        alert("인증이 필요합니다. 다시 로그인해주세요.")
+      } else if (error.response?.status === 403) {
+        alert("게스트 멤버는 메모를 작성할 권한이 없습니다.")
       } else {
-        alert("Error saving memo:\n" + msg)
+        alert("메모 저장 실패: " + msg)
       }
     } finally {
       setIsLoading(false)

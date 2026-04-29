@@ -61,8 +61,13 @@ export function TeamManage({ teamId }: TeamManageProps) {
       setTeamName(teamData.name)
       setTeamDesc(teamData.description || "")
       setMembers(membersData)
-    } catch (error) {
-      console.error("Failed to fetch team data:", error)
+    } catch (err: any) {
+      console.error("Delete failed:", err)
+      if (err.response?.status === 403) {
+        alert("게스트 멤버는 일정을 삭제할 권한이 없습니다.")
+      } else {
+        alert("삭제에 실패했습니다.")
+      }
     } finally {
       setIsTeamLoading(false)
       setIsMembersLoading(false)
@@ -83,9 +88,13 @@ export function TeamManage({ teamId }: TeamManageProps) {
       })
       setTeam(updated)
       alert("팀 정보가 수정되었습니다.")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Update team failed:", error)
-      alert("팀 정보 수정에 실패했습니다.")
+      if (error.response?.status === 403) {
+        alert("게스트 멤버는 팀 정보를 수정할 권한이 없습니다.")
+      } else {
+        alert("팀 정보 수정에 실패했습니다.")
+      }
     } finally {
       setIsUpdating(false)
     }
@@ -100,9 +109,13 @@ export function TeamManage({ teamId }: TeamManageProps) {
       const updated = await teamService.uploadImage(teamId, file)
       setTeam(updated)
       alert("팀 이미지가 업데이트되었습니다.")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Image upload failed:", error)
-      alert("이미지 업로드에 실패했습니다.")
+      if (error.response?.status === 403) {
+        alert("게스트 멤버는 팀 이미지를 변경할 권한이 없습니다.")
+      } else {
+        alert("이미지 업로드에 실패했습니다.")
+      }
     } finally {
       setIsUpdating(false)
     }
@@ -120,7 +133,11 @@ export function TeamManage({ teamId }: TeamManageProps) {
       setMembers(updatedMembers)
     } catch (error: any) {
       console.error("Invite failed:", error)
-      alert(error.response?.data?.detail || "초대에 실패했습니다.")
+      if (error.response?.status === 403) {
+        alert("게스트 멤버는 팀원을 초대할 권한이 없습니다.")
+      } else {
+        alert(error.response?.data?.detail || "초대에 실패했습니다.")
+      }
     } finally {
       setIsInviting(false)
     }
@@ -133,9 +150,13 @@ export function TeamManage({ teamId }: TeamManageProps) {
       await teamService.deleteTeam(teamId)
       alert("팀이 삭제되었습니다.")
       window.location.href = "/" // 메인으로 이동
-    } catch (error) {
+    } catch (error: any) {
       console.error("Delete team failed:", error)
-      alert("팀 삭제에 실패했습니다.")
+      if (error.response?.status === 403) {
+        alert("게스트 멤버는 팀을 삭제할 권한이 없습니다.")
+      } else {
+        alert("팀 삭제에 실패했습니다.")
+      }
     } finally {
       setIsUpdating(false)
     }
@@ -147,9 +168,13 @@ export function TeamManage({ teamId }: TeamManageProps) {
       await teamService.removeMember(teamId, userId)
       setMembers((prev: TeamMemberResponse[]) => prev.filter((m: TeamMemberResponse) => m.user_id !== userId))
       alert("멤버를 내보냈습니다.")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Remove member failed:", error)
-      alert("멤버 내보내기에 실패했습니다.")
+      if (error.response?.status === 403) {
+        alert("게스트 멤버는 팀원을 내보낼 권한이 없습니다.")
+      } else {
+        alert("멤버 내보내기에 실패했습니다.")
+      }
     }
   }
 

@@ -51,9 +51,13 @@ export function ScheduleAssigneeManager({ scheduleId, teamId }: ScheduleAssignee
         const newData = await scheduleService.getAssignees(scheduleId)
         setAssignees(newData)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to update assignee:", error)
-      alert("담당자 업데이트에 실패했습니다.")
+      if (error.response?.status === 403) {
+        alert("게스트 멤버는 담당자를 변경할 권한이 없습니다.")
+      } else {
+        alert("담당자 업데이트에 실패했습니다.")
+      }
     } finally {
       setIsUpdating(null)
     }

@@ -34,8 +34,13 @@ export function MemoDetail({ memo: initialMemo, onBack }: MemoDetailProps) {
       const data = await memoService.getMemo(initialMemo.id)
       setMemo(data)
       setComments(data.comments || [])
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to fetch memo detail:", err)
+      if (err.response?.status === 403) {
+        alert("게스트 멤버는 메모 상세를 조회할 권한이 없습니다.")
+      } else {
+        alert("메모를 불러오는데 실패했습니다.")
+      }
     } finally {
       setIsLoading(false)
     }
@@ -51,9 +56,13 @@ export function MemoDetail({ memo: initialMemo, onBack }: MemoDetailProps) {
       await memoService.deleteMemo(initialMemo.id)
       alert("메모가 삭제되었습니다.")
       onBack()
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to delete memo:", err)
-      alert("메모 삭제에 실패했습니다.")
+      if (err.response?.status === 403) {
+        alert("게스트 멤버는 메모를 삭제할 권한이 없습니다.")
+      } else {
+        alert("메모 삭제에 실패했습니다.")
+      }
     }
   }
 
@@ -67,9 +76,13 @@ export function MemoDetail({ memo: initialMemo, onBack }: MemoDetailProps) {
       // 댓글 목록 다시 불러오기
       const data = await memoService.getComments(initialMemo.id)
       setComments(data)
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to add comment:", err)
-      alert("댓글 작성에 실패했습니다.")
+      if (err.response?.status === 403) {
+        alert("게스트 멤버는 댓글을 작성할 권한이 없습니다.")
+      } else {
+        alert("댓글 작성에 실패했습니다.")
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -80,9 +93,13 @@ export function MemoDetail({ memo: initialMemo, onBack }: MemoDetailProps) {
     try {
       await memoService.deleteComment(initialMemo.id, commentId)
       setComments(comments.filter(c => c.id !== commentId))
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to delete comment:", err)
-      alert("댓글 삭제에 실패했습니다.")
+      if (err.response?.status === 403) {
+        alert("게스트 멤버는 댓글을 삭제할 권한이 없습니다.")
+      } else {
+        alert("댓글 삭제에 실패했습니다.")
+      }
     }
   }
 
