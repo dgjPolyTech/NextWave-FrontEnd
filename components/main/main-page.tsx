@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog"
 import { TeamCreate } from "@/components/team/team-create"
 import { UserLogin } from "@/components/user/user-login"
+import { UserSignUp } from "@/components/user/user-signup"
 import { useToast } from "@/components/ui/use-toast"
 import { teamService, TeamResponse } from "@/services/teamService"
 import { authService } from "@/services/authService"
@@ -71,6 +72,7 @@ interface MainPageProps {
 export function MainPage({ onSelectTeam, onNavigate: navigateProp }: MainPageProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false)
   const [isInboxModalOpen, setIsInboxModalOpen] = useState(false)
   const {
     setIsNotificationModalOpen: setIsFullInboxModalOpen,
@@ -252,17 +254,30 @@ export function MainPage({ onSelectTeam, onNavigate: navigateProp }: MainPagePro
                 </Button>
               </>
             ) : (
-              <Button
-                variant="default"
-                onClick={(e: React.MouseEvent) => {
-                  e.stopPropagation();
-                  setIsLoginModalOpen(true);
-                }}
-                className="shadow-lg hover:shadow-xl transition-all h-11 px-8 rounded-xl font-bold"
-              >
-                <LogIn className="mr-2 h-4 w-4" />
-                시작하기
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    setIsLoginModalOpen(true);
+                  }}
+                  className="h-11 px-5 rounded-xl font-bold hover:bg-primary/5"
+                >
+                  <LogIn className="mr-2 h-4 w-4" />
+                  로그인
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    setIsSignupModalOpen(true);
+                  }}
+                  className="shadow-lg hover:shadow-xl transition-all h-11 px-6 rounded-xl font-bold"
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  회원가입
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -270,142 +285,135 @@ export function MainPage({ onSelectTeam, onNavigate: navigateProp }: MainPagePro
 
       {/* Main Hero Section */}
       <main className="flex-1 max-w-7xl mx-auto px-6 py-12 w-full">
-        <div className="flex flex-col items-center text-center mb-16">
-          <Badge variant="outline" className="mb-4 px-4 py-1 border-primary/30 text-primary font-bold tracking-wider">
-            NEXT-GEN COLLABORATION
-          </Badge>
-          <h2 className="text-5xl font-black tracking-tight mb-4 text-slate-900 dark:text-white leading-tight">
-            팀과 함께하는 <br />
-            <span className="text-primary bg-primary/10 px-4 rounded-2xl">더 스마트한</span> 협업의 시작
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl">
-            실시간 일정 공유, 인터랙티브 메모, AI 기반 분석까지. <br />
-            성공적인 프로젝트를 위한 모든 툴을 하나로 모았습니다.
-          </p>
-        </div>
+        {!isLoggedIn && (
+          <div className="flex flex-col items-center text-center mb-16">
+            <Badge variant="outline" className="mb-4 px-4 py-1 border-primary/30 text-primary font-bold tracking-wider">
+              NEXT-GEN COLLABORATION
+            </Badge>
+            <h2 className="text-5xl font-black tracking-tight mb-4 text-slate-900 dark:text-white leading-tight">
+              팀과 함께하는 <br />
+              <span className="text-primary bg-primary/10 px-4 rounded-2xl">더 스마트한</span> 협업의 시작
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl">
+              실시간 일정 공유, 인터랙티브 메모, AI 기반 분석까지. <br />
+              성공적인 프로젝트를 위한 모든 툴을 하나로 모았습니다.
+            </p>
+          </div>
+        )}
 
         {/* Teams Section */}
-        <section className="mb-16">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-1.5 bg-primary rounded-full"></div>
-              <h3 className="text-2xl font-bold">내 워크스페이스</h3>
-              <Badge variant="secondary" className="ml-2 px-2.5">{teams.length}</Badge>
-            </div>
-            {isLoggedIn && (
+        {isLoggedIn && (
+          <section className="mb-16">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-1.5 bg-primary rounded-full"></div>
+                <h3 className="text-2xl font-bold">내 워크스페이스</h3>
+                <Badge variant="secondary" className="ml-2 px-2.5">{teams.length}</Badge>
+              </div>
               <Button onClick={() => setIsCreateModalOpen(true)} className="rounded-xl font-semibold shadow-md hover:shadow-lg transition-all">
                 <Plus className="mr-2 h-4 w-4" /> 새 팀 만들기
               </Button>
-            )}
-          </div>
+            </div>
 
-          {!isLoggedIn ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <Card key={i} className="border-2 border-dashed border-muted bg-muted/20 opacity-60">
-                  <CardHeader className="h-40 flex items-center justify-center">
-                    <LogIn className="h-8 w-8 text-muted-foreground/30 mb-2" />
-                    <p className="text-sm font-medium text-muted-foreground/50">로그인이 필요합니다</p>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          ) : teams.length === 0 ? (
-            <Card className="border-2 border-dashed border-muted bg-muted/10 p-12 text-center">
-              <div className="flex flex-col items-center max-w-md mx-auto">
-                <div className="bg-primary/10 h-16 w-16 rounded-2xl flex items-center justify-center text-primary mb-6">
-                  <Users className="h-8 w-8" />
+            {teams.length === 0 ? (
+              <Card className="border-2 border-dashed border-muted bg-muted/10 p-12 text-center">
+                <div className="flex flex-col items-center max-w-md mx-auto">
+                  <div className="bg-primary/10 h-16 w-16 rounded-2xl flex items-center justify-center text-primary mb-6">
+                    <Users className="h-8 w-8" />
+                  </div>
+                  <h4 className="text-xl font-bold mb-2">아직 소속된 팀이 없습니다</h4>
+                  <p className="text-muted-foreground mb-8">
+                    새로운 팀을 직접 만들거나, <br />다른 사용자로부터 팀 초대를 받아보세요.
+                  </p>
+                  <Button onClick={() => setIsCreateModalOpen(true)} size="lg" className="rounded-xl px-8">
+                    첫 번째 팀 생성하기
+                  </Button>
                 </div>
-                <h4 className="text-xl font-bold mb-2">아직 소속된 팀이 없습니다</h4>
-                <p className="text-muted-foreground mb-8">
-                  새로운 팀을 직접 만들거나, <br />다른 사용자로부터 팀 초대를 받아보세요.
-                </p>
-                <Button onClick={() => setIsCreateModalOpen(true)} size="lg" className="rounded-xl px-8">
-                  첫 번째 팀 생성하기
-                </Button>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {teams.map((team) => (
+                  <Card
+                    key={team.id}
+                    className="group hover:border-primary/50 transition-all cursor-pointer shadow-sm hover:shadow-xl overflow-hidden rounded-2xl border-2"
+                    onClick={() => onSelectTeam(team.id)}
+                  >
+                    <CardHeader className="p-0">
+                      <div className="h-32 bg-gradient-to-br from-primary/20 via-primary/5 to-transparent relative overflow-hidden">
+                        {team.image_path ? (
+                          <img 
+                            src={`${(typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) || ''}${team.image_path}`} 
+                            alt={team.name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Users className="h-10 w-10 text-primary/30" />
+                          </div>
+                        )}
+                        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="bg-white/90 dark:bg-slate-800/90 h-8 w-8 rounded-lg flex items-center justify-center shadow-md">
+                            <ArrowRight className="h-4 w-4 text-primary" />
+                          </div>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardFooter className="p-5 flex flex-col items-start gap-2 bg-white dark:bg-slate-900">
+                      <div className="flex items-center gap-2 w-full">
+                        <h4 className="font-bold text-lg truncate flex-1">{team.name}</h4>
+                        <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+                      </div>
+                      <p className="text-sm text-muted-foreground line-clamp-1 w-full">
+                        {team.description || "팀 설명이 없습니다."}
+                      </p>
+                      <div className="flex items-center gap-3 mt-2 w-full pt-4 border-t border-border/50">
+                        <div className="flex -space-x-2">
+                          {[1, 2, 3].map((i) => (
+                            <div key={i} className="h-6 w-6 rounded-full border-2 border-background bg-slate-200 dark:bg-slate-800"></div>
+                          ))}
+                        </div>
+                        <span className="text-[10px] font-bold text-muted-foreground/60 uppercase">active members</span>
+                      </div>
+                    </CardFooter>
+                  </Card>
+                ))}
               </div>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {teams.map((team) => (
-                <Card
-                  key={team.id}
-                  className="group hover:border-primary/50 transition-all cursor-pointer shadow-sm hover:shadow-xl overflow-hidden rounded-2xl border-2"
-                  onClick={() => onSelectTeam(team.id)}
-                >
-                  <CardHeader className="p-0">
-                    <div className="h-32 bg-gradient-to-br from-primary/20 via-primary/5 to-transparent relative overflow-hidden">
-                      {team.image_path ? (
-                        <img 
-                          src={`${(typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) || ''}${team.image_path}`} 
-                          alt={team.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Users className="h-10 w-10 text-primary/30" />
-                        </div>
-                      )}
-                      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="bg-white/90 dark:bg-slate-800/90 h-8 w-8 rounded-lg flex items-center justify-center shadow-md">
-                          <ArrowRight className="h-4 w-4 text-primary" />
-                        </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardFooter className="p-5 flex flex-col items-start gap-2 bg-white dark:bg-slate-900">
-                    <div className="flex items-center gap-2 w-full">
-                      <h4 className="font-bold text-lg truncate flex-1">{team.name}</h4>
-                      <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
-                    </div>
-                    <p className="text-sm text-muted-foreground line-clamp-1 w-full">
-                      {team.description || "팀 설명이 없습니다."}
-                    </p>
-                    <div className="flex items-center gap-3 mt-2 w-full pt-4 border-t border-border/50">
-                      <div className="flex -space-x-2">
-                        {[1, 2, 3].map((i) => (
-                          <div key={i} className="h-6 w-6 rounded-full border-2 border-background bg-slate-200 dark:bg-slate-800"></div>
-                        ))}
-                      </div>
-                      <span className="text-[10px] font-bold text-muted-foreground/60 uppercase">active members</span>
-                    </div>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          )}
-        </section>
+            )}
+          </section>
+        )}
 
         {/* Feature Highlights */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="p-8 rounded-3xl bg-white dark:bg-slate-900 border border-border/50 shadow-sm hover:shadow-md transition-all">
-            <div className="h-12 w-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600 mb-6">
-              <Calendar className="h-6 w-6" />
+        {!isLoggedIn && (
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="p-8 rounded-3xl bg-white dark:bg-slate-900 border border-border/50 shadow-sm hover:shadow-md transition-all">
+              <div className="h-12 w-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600 mb-6">
+                <Calendar className="h-6 w-6" />
+              </div>
+              <h4 className="text-xl font-bold mb-3">통합 일정 관리</h4>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                팀원들의 일정을 한눈에 파악하고 효율적으로 조율하세요. 실시간 업데이트와 알림으로 놓치는 일정이 없습니다.
+              </p>
             </div>
-            <h4 className="text-xl font-bold mb-3">통합 일정 관리</h4>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              팀원들의 일정을 한눈에 파악하고 효율적으로 조율하세요. 실시간 업데이트와 알림으로 놓치는 일정이 없습니다.
-            </p>
-          </div>
-          <div className="p-8 rounded-3xl bg-white dark:bg-slate-900 border border-border/50 shadow-sm hover:shadow-md transition-all">
-            <div className="h-12 w-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center text-purple-600 mb-6">
-              <FileText className="h-6 w-6" />
+            <div className="p-8 rounded-3xl bg-white dark:bg-slate-900 border border-border/50 shadow-sm hover:shadow-md transition-all">
+              <div className="h-12 w-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center text-purple-600 mb-6">
+                <FileText className="h-6 w-6" />
+              </div>
+              <h4 className="text-xl font-bold mb-3">협업 메모 시스템</h4>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                동시에 메모를 작성하고 편집하세요. 멘션 기능을 통해 관련 팀원에게 즉시 내용을 공유하고 소통할 수 있습니다.
+              </p>
             </div>
-            <h4 className="text-xl font-bold mb-3">협업 메모 시스템</h4>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              동시에 메모를 작성하고 편집하세요. 멘션 기능을 통해 관련 팀원에게 즉시 내용을 공유하고 소통할 수 있습니다.
-            </p>
-          </div>
-          <div className="p-8 rounded-3xl bg-white dark:bg-slate-900 border border-border/50 shadow-sm hover:shadow-md transition-all">
-            <div className="h-12 w-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center text-green-600 mb-6">
-              <Sparkles className="h-6 w-6" />
+            <div className="p-8 rounded-3xl bg-white dark:bg-slate-900 border border-border/50 shadow-sm hover:shadow-md transition-all">
+              <div className="h-12 w-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center text-green-600 mb-6">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <h4 className="text-xl font-bold mb-3">AI 분석 리포트</h4>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                프로젝트 진행 상황과 팀의 성과를 AI가 분석하여 제공합니다. 더 나은 결정을 위한 데이터를 확인하세요.
+              </p>
             </div>
-            <h4 className="text-xl font-bold mb-3">AI 분석 리포트</h4>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              프로젝트 진행 상황과 팀의 성과를 AI가 분석하여 제공합니다. 더 나은 결정을 위한 데이터를 확인하세요.
-            </p>
-          </div>
-        </section>
+          </section>
+        )}
       </main>
 
       <footer className="mt-auto py-10 border-t border-border/40 text-center">
@@ -512,6 +520,15 @@ export function MainPage({ onSelectTeam, onNavigate: navigateProp }: MainPagePro
           <UserLogin onSuccess={() => {
             setIsLoginModalOpen(false)
             setIsLoggedIn(true)
+          }} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isSignupModalOpen} onOpenChange={setIsSignupModalOpen}>
+        <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden border-none shadow-2xl">
+          <UserSignUp onSuccess={() => {
+            setIsSignupModalOpen(false)
+            setIsLoginModalOpen(true)
           }} />
         </DialogContent>
       </Dialog>
