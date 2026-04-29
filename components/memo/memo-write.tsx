@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { FileText, Bold, Italic, List, Link, Save, Users } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -106,7 +106,7 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
       }
 
       await memoService.createMemo(payload)
-      alert("Memo saved!")
+      alert("메모가 저장되었습니다!")
 
       // 온보딩 최종 완료 처리
       if (isOnboarding) {
@@ -145,8 +145,8 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
     <div className={hideHeader ? "" : "p-8"}>
       {!hideHeader && (
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Write Memo</h1>
-          <p className="text-muted-foreground mt-1">Create a new memo</p>
+          <h1 className="text-3xl font-bold text-foreground">메모 작성</h1>
+          <p className="text-muted-foreground mt-1">새로운 메모를 작성합니다</p>
         </div>
       )}
 
@@ -155,9 +155,9 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              New Memo
+              새 메모
             </CardTitle>
-            <CardDescription>Enter memo content</CardDescription>
+            <CardDescription>메모 내용을 입력하세요</CardDescription>
           </CardHeader>
         )}
         <CardContent className={hideHeader ? "p-0" : ""}>
@@ -195,26 +195,26 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-3 gap-4">
               <div className="col-span-2 space-y-2">
-                <Label htmlFor="title">Title</Label>
+                <Label htmlFor="title">제목</Label>
                 <Input
                   id="title"
-                  placeholder="Enter memo title"
+                  placeholder="메모 제목을 입력하세요"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="schedule_id">Link Schedule (Optional)</Label>
+                <Label htmlFor="schedule_id">일정 연결 (선택)</Label>
                 <Select
                   value={formData.schedule_id || "none"}
                   onValueChange={(value) => setFormData({ ...formData, schedule_id: value === "none" ? "" : value })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="None" />
+                    <SelectValue placeholder="없음" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="none">없음</SelectItem>
                     {schedules.map((s) => (
                       <SelectItem key={s.id} value={String(s.id)}>
                         {s.title}
@@ -228,7 +228,7 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
-                Mention Users (Optional)
+                사용자 멘션 (선택)
               </Label>
               <div className="border rounded-md p-4 space-y-2 max-h-48 overflow-y-auto">
                 {teamMembers.length > 0 ? (
@@ -255,36 +255,22 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-muted-foreground">No team members.</p>
+                  <p className="text-sm text-muted-foreground">팀 멤버가 없습니다.</p>
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Selected users will receive a memo mention notification.
+                선택된 사용자들에게 메모 멘션 알림이 발송됩니다.
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="content">Content</Label>
+              <Label htmlFor="content">내용</Label>
               <div className="border rounded-lg">
-                <div className="flex items-center gap-1 p-2 border-b bg-muted/50">
-                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                    <Bold className="h-4 w-4" />
-                  </Button>
-                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                    <Italic className="h-4 w-4" />
-                  </Button>
-                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                    <List className="h-4 w-4" />
-                  </Button>
-                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                    <Link className="h-4 w-4" />
-                  </Button>
-                </div>
                 <Textarea
                   id="content"
-                  placeholder="Enter memo content..."
+                  placeholder="메모 내용을 입력하세요..."
                   value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, content: e.target.value })}
                   className="border-0 focus-visible:ring-0 min-h-[300px] resize-none"
                 />
               </div>
@@ -293,7 +279,7 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
             <div className="flex justify-end gap-3">
               <Button type="submit" disabled={isLoading}>
                 <Save className="h-4 w-4 mr-2" />
-                {isLoading ? "Saving..." : "Save"}
+                {isLoading ? "저장 중..." : "저장"}
               </Button>
             </div>
           </form>

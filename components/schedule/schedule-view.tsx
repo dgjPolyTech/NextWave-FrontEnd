@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { Calendar, Clock, Users, MoreVertical, Plus } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -74,11 +74,22 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
     }
   }
 
+  const parseISO = (isoString: string) => {
+    if (!isoString) return null
+    let normalized = isoString.replace(' ', 'T')
+    if (!normalized.includes('Z') && !normalized.includes('+') && normalized.includes('T')) {
+      normalized += 'Z'
+    }
+    return new Date(normalized)
+  }
+
   const formatDateTime = (isoString: string) => {
-    const date = new Date(isoString)
+    const date = parseISO(isoString)
+    if (!date || isNaN(date.getTime())) return "-"
     return date.toLocaleString('ko-KR', {
       year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit'
+      hour: '2-digit', minute: '2-digit',
+      hour12: false
     })
   }
 
@@ -121,12 +132,6 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 border rounded-lg p-1 bg-muted/30">
-            <Button variant="ghost" size="sm" className="h-8">이번 주</Button>
-            <Button variant="ghost" size="sm" className="h-8">이번 달</Button>
-            <Button variant="ghost" size="sm" className="h-8 bg-background shadow-sm">전체</Button>
-          </div>
-
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className={`shadow-md hover:shadow-lg transition-all ${onboardingStep === ONBOARDING_STEPS.TEAM_CREATED ? 'ring-4 ring-primary ring-offset-4 animate-pulse relative z-50' : ''}`}>
@@ -148,7 +153,7 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
         </div>
       ) : (
         <div className="grid gap-4">
-          {schedules.map((schedule) => (
+          {schedules.map((schedule: ScheduleResponse) => (
             <Card
               key={schedule.id}
               className="hover:shadow-md transition-all group cursor-pointer"
@@ -174,11 +179,11 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
                     </Badge>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-32" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuContent align="end" className="w-32" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
                         <DropdownMenuItem>수정</DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive">삭제</DropdownMenuItem>
                         <DropdownMenuItem>공유</DropdownMenuItem>

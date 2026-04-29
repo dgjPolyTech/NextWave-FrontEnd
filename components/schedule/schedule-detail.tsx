@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { 
   Calendar, 
   Clock, 
@@ -14,7 +14,8 @@ import {
   Loader2, 
   Sparkles,
   Settings,
-  Plus
+  Plus,
+  Pencil
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -37,6 +38,11 @@ export function ScheduleDetail({ schedule: initialSchedule, onBack }: ScheduleDe
   const [newReminder, setNewReminder] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editTitle, setEditTitle] = useState("")
+  const [editDescription, setEditDescription] = useState("")
+  const [editStartTime, setEditStartTime] = useState("")
+  const [editEndTime, setEditEndTime] = useState("")
 
   useEffect(() => {
     if (initialSchedule) {
@@ -52,6 +58,10 @@ export function ScheduleDetail({ schedule: initialSchedule, onBack }: ScheduleDe
         notificationService.getMyNotifications()
       ])
       setSchedule(scheduleData)
+      setEditTitle(scheduleData.title)
+      setEditDescription(scheduleData.description || "")
+      setEditStartTime(toDateTimeLocal(scheduleData.start_time))
+      setEditEndTime(toDateTimeLocal(scheduleData.end_time))
       setReminders(remindersData.filter(n => n.schedule_id === initialSchedule.id))
     } catch (err) {
       console.error("Failed to fetch schedule detail:", err)
@@ -87,6 +97,31 @@ export function ScheduleDetail({ schedule: initialSchedule, onBack }: ScheduleDe
       console.error("Status update failed:", err)
       if (err.response?.status === 403) {
         alert("게스트 멤버는 일정 상태를 변경할 권한이 없습니다.")
+      }
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleUpdateSchedule = async () => {
+    if (!schedule || !editTitle.trim()) return
+    setIsUpdating(true)
+    try {
+      const updated = await scheduleService.updateSchedule(schedule.id, {
+        title: editTitle,
+        description: editDescription,
+        start_time: new Date(editStartTime).toISOString(),
+        end_time: editEndTime ? new Date(editEndTime).toISOString() : null
+      })
+      setSchedule(updated)
+      setIsEditMode(false)
+      alert("일정이 수정되었습니다.")
+    } catch (err: any) {
+      console.error("Update failed:", err)
+      if (err.response?.status === 403) {
+        alert("일정 생성자 또는 팀 리더만 수정할 수 있습니다.")
+      } else {
+        alert("일정 수정에 실패했습니다.")
       }
     } finally {
       setIsUpdating(false)
@@ -129,13 +164,32 @@ export function ScheduleDetail({ schedule: initialSchedule, onBack }: ScheduleDe
 
   if (!schedule) return null
 
+  const parseISO = (isoString: string | null) => {
+    if (!isoString) return null
+    let normalized = isoString.replace(' ', 'T')
+    if (!normalized.includes('Z') && !normalized.includes('+') && normalized.includes('T')) {
+      normalized += 'Z'
+    }
+    return new Date(normalized)
+  }
+
   const formatDateTime = (isoString: string | null) => {
     if (!isoString) return "-"
-    const date = new Date(isoString)
+    const date = parseISO(isoString)
+    if (!date || isNaN(date.getTime())) return "-"
     return date.toLocaleString('ko-KR', {
       year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit'
+      hour: '2-digit', minute: '2-digit',
+      hour12: false
     })
+  }
+
+  const toDateTimeLocal = (isoString: string | null) => {
+    if (!isoString) return ""
+    const date = parseISO(isoString)
+    if (!date || isNaN(date.getTime())) return ""
+    const offset = date.getTimezoneOffset() * 60000
+    return new Date(date.getTime() - offset).toISOString().slice(0, 16)
   }
 
   return (
@@ -184,12 +238,88 @@ export function ScheduleDetail({ schedule: initialSchedule, onBack }: ScheduleDe
             </div>
           </div>
           
-          <CardTitle className="text-5xl font-black tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/50 mb-6 leading-tight">
-            {schedule.title}
-          </CardTitle>
-          <CardDescription className="text-xl leading-relaxed text-muted-foreground font-medium max-w-2xl">
-            {schedule.description || "이 일정에 대한 상세 설명이 등록되지 않았습니다."}
-          </CardDescription>
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex-1">
+              {isEditMode ? (
+                <div className="space-y-4 max-w-3xl">
+                  <Input 
+                    value={editTitle}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditTitle(e.target.value)}
+                    className="text-4xl font-black h-16 rounded-2xl border-2 border-primary/20 focus:border-primary"
+                    placeholder="일정 제목을 입력하세요"
+                  />
+                  <textarea
+                    value={editDescription}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditDescription(e.target.value)}
+                    className="w-full min-h-[120px] p-4 text-lg rounded-2xl border-2 border-primary/10 focus:border-primary/30 outline-none bg-background/50 font-medium"
+                    placeholder="일정 설명을 입력하세요"
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-primary uppercase tracking-widest">Start Time</label>
+                      <Input 
+                        type="datetime-local"
+                        value={editStartTime}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditStartTime(e.target.value)}
+                        className="rounded-xl border-2 border-primary/10 focus:border-primary/30"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">End Time</label>
+                      <Input 
+                        type="datetime-local"
+                        value={editEndTime}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditEndTime(e.target.value)}
+                        className="rounded-xl border-2 border-primary/10 focus:border-primary/30"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={handleUpdateSchedule} 
+                      className="rounded-xl font-bold px-6"
+                      disabled={isUpdating}
+                    >
+                      {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      저장하기
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => {
+                        setIsEditMode(false)
+                        setEditTitle(schedule.title)
+                        setEditDescription(schedule.description || "")
+                        setEditStartTime(toDateTimeLocal(schedule.start_time))
+                        setEditEndTime(toDateTimeLocal(schedule.end_time))
+                      }} 
+                      className="rounded-xl font-bold"
+                    >
+                      취소
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-4 mb-6">
+                    <CardTitle className="text-5xl font-black tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/50 leading-tight">
+                      {schedule.title}
+                    </CardTitle>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="rounded-xl h-10 w-10 border border-border/50 hover:bg-primary/5 hover:text-primary transition-all"
+                      onClick={() => setIsEditMode(true)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <CardDescription className="text-xl leading-relaxed text-muted-foreground font-medium max-w-2xl">
+                    {schedule.description || "이 일정에 대한 상세 설명이 등록되지 않았습니다."}
+                  </CardDescription>
+                </>
+              )}
+            </div>
+          </div>
         </CardHeader>
 
         <Separator className="mx-10 opacity-50" />
