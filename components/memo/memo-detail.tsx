@@ -45,6 +45,18 @@ export function MemoDetail({ memo: initialMemo, onBack }: MemoDetailProps) {
     fetchMemoDetail()
   }, [initialMemo.id])
 
+  const handleDeleteMemo = async () => {
+    if (!confirm("메모를 삭제하시겠습니까?")) return
+    try {
+      await memoService.deleteMemo(initialMemo.id)
+      alert("메모가 삭제되었습니다.")
+      onBack()
+    } catch (err) {
+      console.error("Failed to delete memo:", err)
+      alert("메모 삭제에 실패했습니다.")
+    }
+  }
+
   const handleAddComment = async () => {
     if (!newComment.trim() || isSubmitting) return
 
@@ -130,9 +142,19 @@ export function MemoDetail({ memo: initialMemo, onBack }: MemoDetailProps) {
               </div>
             </div>
           </div>
-          <CardTitle className="text-3xl font-bold tracking-tight text-foreground/90">
-            {memo.title}
-          </CardTitle>
+          <div className="flex items-start justify-between gap-4">
+            <CardTitle className="text-3xl font-bold tracking-tight text-foreground/90 flex-1">
+              {memo.title}
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 text-muted-foreground hover:text-destructive border-muted transition-all shrink-0"
+              onClick={handleDeleteMemo}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
           {memo.schedule_title && (
             <div className="mt-4 flex items-center gap-2 text-sm text-primary font-medium bg-primary/5 p-3 rounded-lg border border-primary/10">
               <Clock className="h-4 w-4" />

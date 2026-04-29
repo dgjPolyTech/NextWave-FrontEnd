@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Users, Mail, Settings, Camera, Save, Loader2, UserPlus, Info } from "lucide-react"
+import { Users, Mail, Settings, Camera, Save, Loader2, UserPlus, Info, Trash2, UserMinus, AlertTriangle } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { teamService, TeamMemberResponse, TeamResponse } from "@/services/teamService"
+import { userService } from "@/services/userService"
 import { cn } from "@/lib/utils"
 
 interface TeamManageProps {
@@ -40,6 +41,7 @@ export function TeamManage({ teamId }: TeamManageProps) {
   // Members State
   const [members, setMembers] = useState<TeamMemberResponse[]>([])
   const [isMembersLoading, setIsMembersLoading] = useState(true)
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null)
   
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -47,6 +49,10 @@ export function TeamManage({ teamId }: TeamManageProps) {
     setIsTeamLoading(true)
     setIsMembersLoading(true)
     try {
+      // Get current user ID for member management
+      const me = await userService.getMe()
+      setCurrentUserId(me.id)
+
       const [teamData, membersData] = await Promise.all([
         teamService.getTeam(teamId),
         teamService.getMembers(teamId)
@@ -117,6 +123,33 @@ export function TeamManage({ teamId }: TeamManageProps) {
       alert(error.response?.data?.detail || "초대에 실패했습니다.")
     } finally {
       setIsInviting(false)
+    }
+  }
+
+  const handleDeleteTeam = async () => {
+    if (!confirm("정말로 이 팀을 삭제하시겠습니까? 연관된 모든 일정과 메모가 영구적으로 삭제됩니다.")) return
+    setIsUpdating(true)
+    try {
+      await teamService.deleteTeam(teamId)
+      alert("팀이 삭제되었습니다.")
+      window.location.href = "/" // 메인으로 이동
+    } catch (error) {
+      console.error("Delete team failed:", error)
+      alert("팀 삭제에 실패했습니다.")
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleRemoveMember = async (userId: number, userName: string) => {
+    if (!confirm(`${userName}님을 팀에서 내보내시겠습니까?`)) return
+    try {
+      await teamService.removeMember(teamId, userId)
+      setMembers((prev: TeamMemberResponse[]) => prev.filter((m: TeamMemberResponse) => m.user_id !== userId))
+      alert("멤버를 내보냈습니다.")
+    } catch (error) {
+      console.error("Remove member failed:", error)
+      alert("멤버 내보내기에 실패했습니다.")
     }
   }
 
@@ -213,6 +246,33 @@ export function TeamManage({ teamId }: TeamManageProps) {
               변경사항 저장
             </Button>
           </CardFooter>
+
+          {/* Danger Zone: Delete Team */}
+          {members.find((m: TeamMemberResponse) => m.user_id === currentUserId)?.role === 'leader' && (
+            <div className="border-t border-destructive/10 p-6 bg-destructive/5 rounded-b-xl">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-destructive flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    팀 삭제 (Danger Zone)
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    이 팀을 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+                  </p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="border-destructive/30 text-destructive hover:bg-destructive hover:text-white transition-all gap-2"
+                  onClick={handleDeleteTeam}
+                  disabled={isUpdating}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  팀 삭제하기
+                </Button>
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Right Column: Invite Members */}
@@ -235,7 +295,7 @@ export function TeamManage({ teamId }: TeamManageProps) {
                     type="email"
                     placeholder="user@example.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                     className="pl-9 bg-background/50 border-none shadow-sm"
                     required
                   />
@@ -310,6 +370,19 @@ export function TeamManage({ teamId }: TeamManageProps) {
                       >
                         {member.role}
                       </Badge>
+                      
+                      {/* Kick button: Only leaders can kick others, and cannot kick themselves */}
+                      {members.find((m: TeamMemberResponse) => m.user_id === currentUserId)?.role === 'leader' && 
+                       member.user_id !== currentUserId && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-colors"
+                          onClick={() => handleRemoveMember(member.user_id, member.user_name)}
+                        >
+                          <UserMinus className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))

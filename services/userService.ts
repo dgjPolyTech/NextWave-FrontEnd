@@ -57,5 +57,9 @@ export const userService = {
             }
         });
         return response.data;
+    },
+
+    deleteMe: async (): Promise<void> => {
+        await api.delete('/api/v1/users/me');
     }
 };

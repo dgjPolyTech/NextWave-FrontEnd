@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { User, Lock, Upload, UserCircle, ArrowLeft, Briefcase, Target, Users } from "lucide-react"
+import { User, Lock, Upload, UserCircle, ArrowLeft, Briefcase, Target, Users, Trash2, AlertTriangle } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -132,6 +132,33 @@ export function UserUpdate() {
             toast({
                 title: "업데이트 실패",
                 description: errorMsg,
+                variant: "destructive"
+            })
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const handleDeleteAccount = async () => {
+        if (!confirm("정말로 계정을 삭제하시겠습니까? 소속된 팀 멤버 정보가 삭제되며 이 작업은 되돌릴 수 없습니다.")) {
+            return
+        }
+
+        setIsLoading(true)
+        try {
+            await userService.deleteMe()
+            toast({
+                title: "탈퇴 완료",
+                description: "그동안 이용해주셔서 감사합니다.",
+            })
+            // 로그아웃 및 페이지 새로고침
+            localStorage.removeItem('token')
+            window.location.href = "/"
+        } catch (error: any) {
+            console.error("Account deletion failed:", error)
+            toast({
+                title: "탈퇴 실패",
+                description: "계정 삭제 중 오류가 발생했습니다.",
                 variant: "destructive"
             })
         } finally {
@@ -333,6 +360,29 @@ export function UserUpdate() {
                             {isLoading ? "저장 중..." : "수정 완료"}
                         </Button>
                     </form>
+
+                    <div className="mt-12 pt-8 border-t border-destructive/10">
+                        <div className="bg-destructive/5 border border-destructive/20 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div className="space-y-1 text-center md:text-left">
+                                <h3 className="text-lg font-bold text-destructive flex items-center gap-2 justify-center md:justify-start">
+                                    <AlertTriangle className="h-5 w-5" />
+                                    계정 삭제
+                                </h3>
+                                <p className="text-sm text-muted-foreground">
+                                    계정을 삭제하면 모든 데이터가 영구적으로 제거됩니다.
+                                </p>
+                            </div>
+                            <Button
+                                variant="outline"
+                                onClick={handleDeleteAccount}
+                                disabled={isLoading}
+                                className="border-destructive/30 text-destructive hover:bg-destructive hover:text-white transition-all gap-2 px-6 rounded-xl"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                계정 탈퇴하기
+                            </Button>
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
         </div>

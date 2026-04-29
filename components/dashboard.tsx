@@ -86,6 +86,30 @@ export function Dashboard({ teamId, onNavigate }: DashboardProps) {
     fetchData()
   }, [teamId])
 
+  const handleStatusChange = async (scheduleId: number, currentStatus: string) => {
+    const statusCycle: Record<string, string> = {
+      'PENDING': 'IN_PROGRESS',
+      'IN_PROGRESS': 'COMPLETED',
+      'COMPLETED': 'PENDING'
+    }
+    const nextStatus = statusCycle[currentStatus] || 'PENDING'
+    
+    try {
+      await scheduleService.updateStatus(scheduleId, { status: nextStatus })
+      setSchedules((prev: ScheduleResponse[]) => prev.map((s: ScheduleResponse) => s.id === scheduleId ? { ...s, status: nextStatus } : s))
+    } catch (error) {
+      console.error("Failed to update status:", error)
+    }
+  }
+
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case 'IN_PROGRESS': return { label: '진행 중', color: 'bg-amber-500/10 text-amber-600 border-amber-200' }
+      case 'COMPLETED': return { label: '완료', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-200' }
+      default: return { label: '예정', color: 'bg-slate-100 text-slate-600 border-slate-200' }
+    }
+  }
+
   // Get first 3 items for preview
   const recentSchedules = schedules.slice(0, 3)
   const recentMemos = memos.slice(0, 3)
@@ -266,20 +290,27 @@ export function Dashboard({ teamId, onNavigate }: DashboardProps) {
             </Button>
           </CardHeader>
           <CardContent className="flex-1 space-y-4">
-            {recentSchedules.length > 0 ? recentSchedules.map((item) => (
-              <div key={item.id} className="flex items-center gap-4 p-3 rounded-lg border bg-card hover:bg-accent/30 transition-colors group">
-                <div className={`w-1 h-10 rounded-full bg-blue-500`} />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{item.title}</p>
-                  <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" /> {new Date(item.start_time).toLocaleString()}
+            {recentSchedules.length > 0 ? recentSchedules.map((item) => {
+              const cfg = getStatusConfig(item.status)
+              return (
+                <div key={item.id} className="flex items-center gap-4 p-3 rounded-lg border bg-card hover:bg-accent/30 transition-colors group">
+                  <div className={`w-1 h-10 rounded-full ${item.status === 'COMPLETED' ? 'bg-emerald-500' : item.status === 'IN_PROGRESS' ? 'bg-amber-500' : 'bg-blue-500'}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{item.title}</p>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" /> {new Date(item.start_time).toLocaleString()}
+                    </div>
                   </div>
+                  <Badge 
+                    variant="outline" 
+                    className={`cursor-pointer hover:shadow-sm transition-all ${cfg.color}`}
+                    onClick={() => handleStatusChange(item.id, item.status)}
+                  >
+                    {cfg.label}
+                  </Badge>
                 </div>
-                <Badge variant="secondary" className="group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                  {item.status || "예정"}
-                </Badge>
-              </div>
-            )) : (
+              )
+            }) : (
               <div className="text-center py-8 text-muted-foreground text-sm">일정이 없습니다.</div>
             )}
           </CardContent>
