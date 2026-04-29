@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { FileText, Bold, Italic, List, Link, Save, Users, Clock, Loader2 } from "lucide-react"
+import { FileText, Save, Users, Clock, Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -45,6 +45,7 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false, a
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [internalAiData, setInternalAiData] = useState<any>(null)
   const [isInternalAiGenerated, setIsInternalAiGenerated] = useState(false)
+  const [aiRationale, setAiRationale] = useState("")
 
   // AI 자동 생성 트리거
   useEffect(() => {
@@ -56,6 +57,7 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false, a
           const data = await onboardingService.generateContextualGuide(teamId, 'memo')
           if (data.example_memo) {
             setInternalAiData(data.example_memo)
+            setAiRationale(data.rationale || "")
             setIsInternalAiGenerated(true)
           }
         } catch (error) {
@@ -107,13 +109,24 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false, a
             contentIdx++;
           }
 
+          const scheduleExists = schedules.some(s => s.id === targetData.schedule_id);
+          
           return {
             ...prev,
             title: nextTitle,
             content: nextContent,
-            schedule_id: targetData.schedule_id ? String(targetData.schedule_id) : prev.schedule_id
+            schedule_id: (targetData.schedule_id !== undefined && targetData.schedule_id !== null && scheduleExists) 
+              ? String(targetData.schedule_id) 
+              : prev.schedule_id
           };
         });
+
+        if (Array.isArray(targetData.mention_ids)) {
+          const validMentionIds = targetData.mention_ids.filter(id => 
+            teamMembers.some(m => m.user_id === id)
+          );
+          setSelectedMentions(validMentionIds.map(String));
+        }
 
         if (titleIdx >= title.length && contentIdx >= content.length) {
           clearInterval(interval);
@@ -122,14 +135,24 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false, a
 
       return () => clearInterval(interval);
     } else if (targetData) {
+      const scheduleExists = schedules.some(s => s.id === targetData.schedule_id);
+      
       setFormData(prev => ({
         ...prev,
-        title: targetData.title,
-        content: targetData.content,
-        schedule_id: targetData.schedule_id ? String(targetData.schedule_id) : prev.schedule_id
+        title: targetData.title || "",
+        content: targetData.content || "",
+        schedule_id: (targetData.schedule_id !== undefined && targetData.schedule_id !== null && scheduleExists) 
+          ? String(targetData.schedule_id) 
+          : prev.schedule_id
       }));
+      if (Array.isArray(targetData.mention_ids)) {
+        const validMentionIds = targetData.mention_ids.filter(id => 
+          teamMembers.some(m => m.user_id === id)
+        );
+        setSelectedMentions(validMentionIds.map(String));
+      }
     }
-  }, [internalAiData, isInternalAiGenerated])
+  }, [internalAiData, isInternalAiGenerated, schedules, teamMembers])
 
   useEffect(() => {
     const fetchSchedules = async () => {
@@ -251,7 +274,7 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false, a
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm font-bold text-primary flex items-center gap-1">
-                    AI 맞춤형 가이드 (마지막 단계)
+                    AI 맞춤형 가이드
                   </p>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     사용자님의 프로필을 분석하여 <strong>맞춤형 추천 메모</strong>를 미리 입력해두었습니다. <br />
@@ -271,6 +294,19 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false, a
                     </Button>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+          {isInternalAiGenerated && (
+            <div className="mb-6 p-4 rounded-xl bg-primary/5 border border-primary/10 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
+              <div className="mt-0.5 bg-primary/20 p-1.5 rounded-lg">
+                <Sparkles className="h-4 w-4 text-primary" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-primary">AI 추천 메모 분석 결과</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {aiRationale || "현재 팀의 컨텍스트를 분석하여 최적의 메모 주제를 제안합니다."}
+                </p>
               </div>
             </div>
           )}

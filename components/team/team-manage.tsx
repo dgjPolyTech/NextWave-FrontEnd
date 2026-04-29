@@ -63,12 +63,8 @@ export function TeamManage({ teamId }: TeamManageProps) {
       setTeamDesc(teamData.description || "")
       setMembers(membersData)
     } catch (err: any) {
-      console.error("Delete failed:", err)
-      if (err.response?.status === 403) {
-        alert("게스트 멤버는 일정을 삭제할 권한이 없습니다.")
-      } else {
-        alert("삭제에 실패했습니다.")
-      }
+      console.error("Failed to fetch team data:", err)
+      alert("팀 정보를 불러오는데 실패했습니다.")
     } finally {
       setIsTeamLoading(false)
       setIsMembersLoading(false)

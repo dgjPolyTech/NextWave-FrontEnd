@@ -11,8 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { scheduleService } from "@/services/scheduleService"
 import { teamService, TeamMemberResponse } from "@/services/teamService"
 import { onboardingService } from "@/services/onboardingService"
-import { Sparkles, AlertCircle, Loader2 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { Sparkles, Loader2 } from "lucide-react"
+import { cn, parseISO } from "@/lib/utils"
 
 interface ScheduleCreateFormProps {
   teamId?: number
@@ -39,15 +39,7 @@ export function ScheduleCreateForm({ teamId, onSuccess, initialData, isAiGenerat
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [internalAiData, setInternalAiData] = useState<any>(null)
   const [isInternalAiGenerated, setIsInternalAiGenerated] = useState(false)
-
-  const parseISO = (isoString: string | null) => {
-    if (!isoString) return null
-    let normalized = isoString.replace(' ', 'T')
-    if (!normalized.includes('Z') && !normalized.includes('+') && normalized.includes('T')) {
-      normalized += 'Z'
-    }
-    return new Date(normalized)
-  }
+  const [aiRationale, setAiRationale] = useState("")
 
   // 날짜 포맷 변환 (YYYY-MM-DDThh:mm)
   const formatToDateTimeLocal = (dateStr: string) => {
@@ -78,6 +70,7 @@ export function ScheduleCreateForm({ teamId, onSuccess, initialData, isAiGenerat
           const data = await onboardingService.generateContextualGuide(teamId, 'schedule')
           if (data.example_schedule) {
             setInternalAiData(data.example_schedule)
+            setAiRationale(data.rationale || "")
             setIsInternalAiGenerated(true)
           }
         } catch (error) {
@@ -138,6 +131,13 @@ export function ScheduleCreateForm({ teamId, onSuccess, initialData, isAiGenerat
           };
         });
 
+        if (Array.isArray(targetData.assignee_ids)) {
+          const validAssigneeIds = targetData.assignee_ids.filter(id => 
+            teamMembers.some(m => m.user_id === id)
+          );
+          setSelectedAssignees(validAssigneeIds.map(String));
+        }
+
         if (titleIdx >= title.length && descIdx >= description.length) {
           clearInterval(interval);
         }
@@ -145,15 +145,22 @@ export function ScheduleCreateForm({ teamId, onSuccess, initialData, isAiGenerat
 
       return () => clearInterval(interval);
     } else if (targetData) {
-      setFormData(prev => ({
-        ...prev,
-        title: targetData.title,
-        description: targetData.description,
+      setFormData({
+        title: targetData.title || "",
+        description: targetData.description || "",
         start_time: formatToDateTimeLocal(targetData.start_time),
         end_time: formatToDateTimeLocal(targetData.end_time),
-      }));
+        status: "PENDING",
+        team_id: teamId || 1
+      });
+      if (Array.isArray(targetData.assignee_ids)) {
+        const validAssigneeIds = targetData.assignee_ids.filter(id => 
+          teamMembers.some(m => m.user_id === id)
+        );
+        setSelectedAssignees(validAssigneeIds.map(String));
+      }
     }
-  }, [initialData, internalAiData, isAiGenerated, isInternalAiGenerated])
+  }, [initialData, internalAiData, isAiGenerated, isInternalAiGenerated, teamMembers])
 
   // 팀 멤버 목록 조회
   useEffect(() => {
@@ -281,6 +288,19 @@ export function ScheduleCreateForm({ teamId, onSuccess, initialData, isAiGenerat
                   </Button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+        {isInternalAiGenerated && (
+          <div className="mb-6 p-4 rounded-xl bg-primary/5 border border-primary/10 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
+            <div className="mt-0.5 bg-primary/20 p-1.5 rounded-lg">
+              <Sparkles className="h-4 w-4 text-primary" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-primary">AI 추천 일정 분석 결과</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {aiRationale || "현재 팀의 컨텍스트를 분석하여 최적의 일정을 제안합니다."}
+              </p>
             </div>
           </div>
         )}

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { FileText, Eye, Edit, Clock, User, ArrowUpDown, Filter, Sparkles } from "lucide-react"
+import { FileText, Clock, User, ArrowUpDown, Filter, Sparkles } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"

@@ -1,15 +1,9 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Calendar, Clock, Users, MoreVertical, Plus, Sparkles, Loader2 } from "lucide-react"
+import { Calendar, Clock, Users, Plus, Sparkles } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   Dialog,
   DialogContent,
@@ -20,9 +14,8 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { ScheduleCreateForm } from "./schedule-create"
 import { scheduleService, ScheduleResponse } from "@/services/scheduleService"
-import { onboardingService } from "@/services/onboardingService"
-import { PAGES } from "@/lib/constants"
 import { OnboardingTrigger } from "@/components/user/onboarding-trigger"
+import { parseISO } from "@/lib/utils"
 
 interface ScheduleViewProps {
   teamId?: number
@@ -32,9 +25,7 @@ interface ScheduleViewProps {
 
 export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleViewProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isAiGenerating, setIsAiGenerating] = useState(false)
   const [shouldAutoGenerate, setShouldAutoGenerate] = useState(false)
-  const [aiData, setAiData] = useState<any>(null)
   const [schedules, setSchedules] = useState<ScheduleResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -57,24 +48,14 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
 
   const handleCreateSuccess = () => {
     setIsDialogOpen(false)
-    setAiData(null)
     fetchSchedules()
   }
 
   const handleAutoGenerate = () => {
-    setAiData(null)
     setShouldAutoGenerate(true)
     setIsDialogOpen(true)
   }
 
-  const parseISO = (isoString: string) => {
-    if (!isoString) return null
-    let normalized = isoString.replace(' ', 'T')
-    if (!normalized.includes('Z') && !normalized.includes('+') && normalized.includes('T')) {
-      normalized += 'Z'
-    }
-    return new Date(normalized)
-  }
 
   const formatDateTime = (isoString: string) => {
     const date = parseISO(isoString)
@@ -111,7 +92,6 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
             <Dialog open={isDialogOpen} onOpenChange={(open: boolean) => {
               setIsDialogOpen(open)
               if (!open) {
-                setAiData(null)
                 setShouldAutoGenerate(false)
               }
             }}>
@@ -163,18 +143,6 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
                     <Badge variant={schedule.status === "COMPLETED" ? "secondary" : "default"} className="px-3">
                       {schedule.status === "COMPLETED" ? "완료" : schedule.status === "PENDING" ? "대기중" : schedule.status}
                     </Badge>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-32" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                        <DropdownMenuItem>수정</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">삭제</DropdownMenuItem>
-                        <DropdownMenuItem>공유</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </div>
                 </div>
               </CardHeader>
