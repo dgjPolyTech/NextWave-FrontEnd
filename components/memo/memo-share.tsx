@@ -13,8 +13,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react"
 import { memoService, MemoResponse } from "@/services/memoService"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { MemoWrite } from "./memo-write"
 
 interface MemoShareProps {
   teamId: number
@@ -27,20 +36,22 @@ export function MemoShare({ teamId, onViewMemo }: MemoShareProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
   const [authorFilter, setAuthorFilter] = useState("all")
+  const [isWriteModalOpen, setIsWriteModalOpen] = useState(false)
   const itemsPerPage = 10
 
-  useEffect(() => {
-    const fetchMemos = async () => {
-      setIsLoading(true)
-      try {
-        const data = await memoService.getTeamMemos(teamId)
-        setMemos(data)
-      } catch (err) {
-        console.error("Failed to fetch memos:", err)
-      } finally {
-        setIsLoading(false)
-      }
+  const fetchMemos = async () => {
+    setIsLoading(true)
+    try {
+      const data = await memoService.getTeamMemos(teamId)
+      setMemos(data)
+    } catch (err) {
+      console.error("Failed to fetch memos:", err)
+    } finally {
+      setIsLoading(false)
     }
+  }
+
+  useEffect(() => {
     fetchMemos()
   }, [teamId])
 
@@ -84,6 +95,33 @@ export function MemoShare({ teamId, onViewMemo }: MemoShareProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <Dialog open={isWriteModalOpen} onOpenChange={setIsWriteModalOpen}>
+            <DialogTrigger asChild>
+              <Button className="h-9 gap-2 shadow-md hover:shadow-lg transition-all">
+                <Plus className="h-4 w-4" />
+                메모 생성
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>새 메모 작성</DialogTitle>
+                <DialogDescription>
+                  팀원들과 공유할 메모 내용을 입력하세요.
+                </DialogDescription>
+              </DialogHeader>
+              <MemoWrite 
+                teamId={teamId} 
+                hideHeader={true} 
+                onSuccess={() => {
+                  setIsWriteModalOpen(false);
+                  fetchMemos();
+                }} 
+              />
+            </DialogContent>
+          </Dialog>
+
+          <div className="h-6 w-px bg-border mx-1 hidden md:block" />
+
           <div className="flex items-center gap-2">
             <Label htmlFor="author-filter" className="sr-only">작성자 필터</Label>
             <Select value={authorFilter} onValueChange={(value) => { setAuthorFilter(value); setCurrentPage(1); }}>

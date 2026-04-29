@@ -114,14 +114,12 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
             isCollapsed={isCollapsed}
           />
 
-          <SidebarCollapsibleItem
+          <SidebarNavItem
             icon={FileText}
             label="협업 메모"
+            isActive={currentPage === PAGES.MEMO_SHARE || currentPage === PAGES.MEMO_DETAIL || currentPage === PAGES.MEMO_WRITE}
+            onClick={() => onNavigate(PAGES.MEMO_SHARE)}
             isCollapsed={isCollapsed}
-            items={[
-              { label: "메모 작성", active: currentPage === PAGES.MEMO_WRITE, onClick: () => onNavigate(PAGES.MEMO_WRITE) },
-               { label: "메모 공유", active: currentPage === PAGES.MEMO_SHARE, onClick: () => onNavigate(PAGES.MEMO_SHARE) },
-            ]}
           />
 
           <SidebarCollapsibleItem

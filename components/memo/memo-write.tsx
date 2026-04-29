@@ -26,9 +26,10 @@ interface MemoWriteProps {
   teamId: number
   onSuccess?: () => void
   onNavigate?: (page: any) => void
+  hideHeader?: boolean
 }
 
-export function MemoWrite({ teamId, onSuccess, onNavigate }: MemoWriteProps) {
+export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }: MemoWriteProps) {
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -133,21 +134,25 @@ export function MemoWrite({ teamId, onSuccess, onNavigate }: MemoWriteProps) {
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Write Memo</h1>
-        <p className="text-muted-foreground mt-1">Create a new memo</p>
-      </div>
+    <div className={hideHeader ? "" : "p-8"}>
+      {!hideHeader && (
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground">Write Memo</h1>
+          <p className="text-muted-foreground mt-1">Create a new memo</p>
+        </div>
+      )}
 
-      <Card className="max-w-3xl">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            New Memo
-          </CardTitle>
-          <CardDescription>Enter memo content</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Card className={hideHeader ? "border-0 shadow-none" : "max-w-3xl"}>
+        {!hideHeader && (
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              New Memo
+            </CardTitle>
+            <CardDescription>Enter memo content</CardDescription>
+          </CardHeader>
+        )}
+        <CardContent className={hideHeader ? "p-0" : ""}>
           {isOnboarding && (
             <div className="mb-6 p-4 rounded-xl bg-primary/10 border border-primary/20 animate-in fade-in slide-in-from-top-2 duration-500">
               <div className="flex items-start gap-3">
