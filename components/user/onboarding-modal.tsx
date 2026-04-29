@@ -2,20 +2,17 @@
 
 import { useState, useEffect } from "react"
 import {
-  Sparkles, Calendar, FileText, ArrowRight, X,
-  Loader2, ChevronRight, CheckCircle2, Users, Trash2
+  Sparkles, ArrowRight, X,
+  Loader2, ChevronRight, CheckCircle2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { onboardingService, OnboardingResponse } from "@/services/onboardingService"
-import { teamService } from "@/services/teamService"
 import { userService } from "@/services/userService"
+import { OnboardingExperience } from "./onboarding-experience"
 
 // ── 단계 정의 ──────────────────────────────────────────────
-type Step = "loading" | "guide" | "team-create" | "done"
-type FeatureIntent = "schedule" | "memo" | null
+type Step = "intro" | "loading" | "guide"
 
 interface OnboardingModalProps {
   isOpen: boolean
@@ -23,68 +20,34 @@ interface OnboardingModalProps {
 }
 
 export function OnboardingModal({ isOpen, onComplete }: OnboardingModalProps) {
-  const [step, setStep] = useState<Step>("loading")
+  const [step, setStep] = useState<Step>("intro")
   const [guide, setGuide] = useState<OnboardingResponse | null>(null)
-  const [featureIntent, setFeatureIntent] = useState<FeatureIntent>(null)
-  const [teamName, setTeamName] = useState("")
-  const [isCreatingTeam, setIsCreatingTeam] = useState(false)
-  const [createdTeamId, setCreatedTeamId] = useState<number | null>(null)
+  const [showExperience, setShowExperience] = useState(false)
   const { toast } = useToast()
 
-  // 모달 열릴 때 가이드 API 호출
+  // 모달 열릴 때 상태 초기화
   useEffect(() => {
     if (!isOpen) return
-    setStep("loading")
+    setStep("intro")
     setGuide(null)
-    setFeatureIntent(null)
-    setTeamName("")
-    setCreatedTeamId(null)
-
-    onboardingService.getGuide()
-      .then((data) => {
-        setGuide(data)
-        onboardingService.saveGuide(data) // 가이드 데이터 저장 추가
-        setStep("guide")
-      })
-      .catch(() => {
-        // 실패해도 guide step으로 진행 (안내만 없음)
-        setStep("guide")
-      })
+    setShowExperience(false)
   }, [isOpen])
+
+  const handleFetchGuide = async () => {
+    setStep("loading")
+    try {
+      const data = await onboardingService.getGuide()
+      setGuide(data)
+      onboardingService.saveGuide(data)
+      setStep("guide")
+    } catch (error) {
+      console.error("Failed to fetch guide:", error)
+      setStep("guide") // 실패해도 결과창(기본문구)으로 보냄
+    }
+  }
 
   if (!isOpen) return null
 
-  // ── 팀 생성 핸들러 ──────────────────────────────────────
-  const handleCreateTeam = async () => {
-    const name = teamName.trim() || `${guide?.user_name ?? "내"}의 팀`
-    setIsCreatingTeam(true)
-    try {
-      const team = await teamService.createTeam({
-        name,
-        description: "온보딩 중 생성된 팀입니다.",
-      })
-
-      // 온보딩 단계 설정
-      onboardingService.setStep('TEAM_CREATED')
-      onboardingService.saveOnboardingTeam(team.id, team.name)
-
-      // 사용자 완료 표시 (최소한의 가입 완료 단계로 간주)
-      try {
-        const me = await userService.getMe()
-        onboardingService.markCompleted(me.id)
-      } catch { /* silent */ }
-
-      onComplete(team.id)
-    } catch (err: any) {
-      toast({
-        title: "팀 생성 실패",
-        description: err.response?.data?.detail || "팀 생성 중 오류가 발생했습니다.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsCreatingTeam(false)
-    }
-  }
 
   const handleSkip = async () => {
     try {
@@ -97,168 +60,145 @@ export function OnboardingModal({ isOpen, onComplete }: OnboardingModalProps) {
 
   // ── 렌더 ─────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* 배경 오버레이 */}
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      {!showExperience && (
+        <div 
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" 
+          onClick={handleSkip}
+        />
+      )}
 
       {/* 모달 카드 */}
-      <div className="relative w-full max-w-xl mx-4 animate-in fade-in zoom-in-95 duration-300">
-        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 shadow-2xl">
+      {!showExperience && (
+        <div className="relative w-full max-w-lg animate-in fade-in zoom-in-95 duration-500 ease-out">
+          <div className="overflow-hidden rounded-[2rem] border border-border/50 bg-background/95 shadow-2xl backdrop-blur-xl">
+            
+            {/* 장식 요소 (미묘하게) */}
+            <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
+            <div className="absolute -bottom-24 -left-24 h-48 w-48 rounded-full bg-blue-500/5 blur-3xl" />
 
-          {/* 배경 장식 */}
-          <div className="pointer-events-none absolute -top-20 -right-20 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-blue-600/20 blur-3xl" />
-
-          {/* ── STEP: LOADING ──────────────────────────────── */}
-          {step === "loading" && (
-            <div className="flex flex-col items-center justify-center gap-5 px-8 py-16">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/20 ring-2 ring-primary/40">
-                <Sparkles className="h-8 w-8 text-primary animate-pulse" />
-              </div>
-              <div className="text-center">
-                <p className="text-lg font-bold text-white">AI가 맞춤 가이드를 생성 중입니다</p>
-                <p className="mt-1 text-sm text-slate-400">프로필을 분석하여 최적의 활용법을 찾고 있어요...</p>
-              </div>
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
-          )}
-
-          {/* ── STEP: GUIDE ────────────────────────────────── */}
-          {step === "guide" && (
-            <div className="px-8 py-8 flex flex-col gap-6">
-              {/* 헤더 */}
-              <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-primary/20 ring-2 ring-primary/30">
-                  <Sparkles className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-extrabold text-white">
-                    {guide?.user_name ? `${guide.user_name}님, 환영합니다! 🎉` : "NextWave에 오신 걸 환영합니다! 🎉"}
+            {/* ── STEP: INTRO ────────────────────────────────── */}
+            {step === "intro" && (
+              <div className="flex flex-col">
+                <div className="relative px-8 pt-12 pb-8 text-center border-b border-border/50">
+                  <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-xl ring-1 ring-primary/30 animate-in zoom-in duration-500">
+                    <Sparkles className="h-8 w-8" />
+                  </div>
+                  <h2 className="text-3xl font-black tracking-tight text-foreground mb-3">
+                    NextWave에 오신 걸<br />환영합니다! 🎉
                   </h2>
-                  <p className="mt-0.5 text-sm text-slate-400">
-                    AI가 분석한 맞춤 활용 예시를 확인해보세요.
+                  <p className="text-base text-muted-foreground leading-relaxed">
+                    프로젝트 관리부터 실시간 협업까지,<br />
+                    팀의 생산성을 높이는 가장 스마트한 방법을 확인해보세요.
                   </p>
                 </div>
-              </div>
 
-              {/* AI 추천 카드들 */}
-              {guide ? (
-                <div className="grid grid-cols-1 gap-4">
-                  {/* 예시 일정 카드 */}
-                  <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4 transition-all hover:border-blue-400/40">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-500/20">
-                        <Calendar className="h-4 w-4 text-blue-400" />
-                      </div>
-                      <span className="text-xs font-semibold uppercase tracking-wide text-blue-400">AI 추천 예시 일정</span>
-                    </div>
-                    <p className="font-bold text-white text-sm">{guide.guide.example_schedule.title}</p>
-                    <p className="mt-1 text-xs text-slate-400 leading-relaxed">{guide.guide.example_schedule.description}</p>
-                    <p className="mt-2 text-xs text-blue-300/80">
-                      {guide.guide.example_schedule.start_time} ~ {guide.guide.example_schedule.end_time}
+                <div className="px-8 py-10 space-y-4">
+                  <Button
+                    size="lg"
+                    className="w-full h-15 rounded-2xl font-bold bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 gap-3 group py-4 text-lg"
+                    onClick={handleFetchGuide}
+                  >
+                    <span>가이드 시작하기</span>
+                    <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    className="w-full h-12 rounded-2xl text-muted-foreground hover:text-foreground hover:bg-muted/50 text-sm font-semibold"
+                    onClick={handleSkip}
+                  >
+                    나중에 할게요
+                  </Button>
+                </div>
+
+                <div className="px-8 py-4 bg-muted/20 flex items-center justify-center">
+                  <div className="flex items-center gap-1.5 opacity-40">
+                    <div className="h-1 w-8 rounded-full bg-primary" />
+                    <div className="h-1 w-2 rounded-full bg-border" />
+                    <div className="h-1 w-2 rounded-full bg-border" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── STEP: LOADING ──────────────────────────────── */}
+            {step === "loading" && (
+              <div className="flex flex-col items-center justify-center gap-6 px-10 py-24 text-center">
+                <div className="relative">
+                  <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-xl animate-pulse" />
+                  <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-xl ring-1 ring-primary/50">
+                    <Sparkles className="h-8 w-8 animate-pulse" />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <h2 className="text-2xl font-bold tracking-tight">AI 맞춤 가이드 생성 중</h2>
+                  <p className="text-muted-foreground">사용자님의 프로필을 분석하여<br />최적의 활용 시나리오를 찾고 있습니다...</p>
+                </div>
+                <div className="flex gap-1.5 pt-2">
+                  <div className="h-2 w-2 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
+                  <div className="h-2 w-2 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
+                  <div className="h-2 w-2 rounded-full bg-primary animate-bounce" />
+                </div>
+              </div>
+            )}
+
+            {/* ── STEP: GUIDE (RESULT) ────────────────────────── */}
+            {step === "guide" && (
+              <div className="flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="relative px-8 pt-10 pb-6 text-center border-b border-border/50">
+                  <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-green-500 text-white shadow-lg shadow-green-500/20 ring-1 ring-green-500/30">
+                    <CheckCircle2 className="h-7 w-7" />
+                  </div>
+                  <h2 className="text-2xl font-black tracking-tight text-foreground">
+                    {guide?.user_name ? `${guide.user_name}님, 준비가 끝났습니다! 🎉` : "맞춤형 가이드 준비 완료! 🎉"}
+                  </h2>
+                </div>
+
+                <div className="px-8 py-8 space-y-6">
+                  <div className="p-6 rounded-2xl bg-primary/5 border border-primary/20 transition-all hover:bg-primary/10">
+                    <p className="text-base text-foreground/90 leading-relaxed text-center font-medium">
+                      {guide?.user_name ? (
+                        <>"{guide.user_name}님을 위한 최적의 팀 협업 시나리오 분석이 완료되었습니다. 이제 대시보드에서 스마트한 협업을 시작해보세요."</>
+                      ) : (
+                        <>"NextWave의 모든 기능을 사용할 준비가 되었습니다. 팀원들과 일정을 공유하고 실시간 메모로 아이디어를 발전시켜보세요."</>
+                      )}
                     </p>
                   </div>
 
-                  {/* 예시 메모 카드 */}
-                  <div className="rounded-2xl border border-purple-500/20 bg-purple-500/10 p-4 transition-all hover:border-purple-400/40">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-purple-500/20">
-                        <FileText className="h-4 w-4 text-purple-400" />
-                      </div>
-                      <span className="text-xs font-semibold uppercase tracking-wide text-purple-400">AI 추천 예시 메모</span>
-                    </div>
-                    <p className="font-bold text-white text-sm">{guide.guide.example_memo.title}</p>
-                    <p className="mt-1 text-xs text-slate-400 leading-relaxed">{guide.guide.example_memo.content}</p>
+                  <Button
+                    size="lg"
+                    className="w-full h-14 rounded-2xl font-bold bg-primary hover:bg-primary/90 text-white shadow-xl shadow-primary/20 gap-3 group text-lg"
+                    onClick={() => setShowExperience(true)}
+                  >
+                    <span>시작하기</span>
+                    <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                  </Button>
+                </div>
+
+                <div className="px-8 py-4 bg-muted/20 flex items-center justify-center">
+                  <div className="flex items-center gap-1.5 opacity-40">
+                    <div className="h-1 w-2 rounded-full bg-border" />
+                    <div className="h-1 w-2 rounded-full bg-border" />
+                    <div className="h-1 w-8 rounded-full bg-primary" />
                   </div>
                 </div>
-              ) : (
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center text-sm text-slate-400">
-                  지금 바로 일정·메모 기능을 활용해보세요!
-                </div>
-              )}
-
-              {/* CTA 버튼들 */}
-              <div className="flex flex-col gap-2 pt-1">
-                <p className="text-xs text-slate-500 text-center mb-1">이제 팀과 함께 효율적으로 협업해보세요!</p>
-
-                <Button
-                  id="onboarding-start-btn"
-                  className="w-full h-12 rounded-xl font-bold bg-primary hover:bg-primary/90 text-white gap-2 shadow-lg shadow-primary/20"
-                  onClick={() => { setFeatureIntent("schedule"); setStep("team-create") }}
-                >
-                  <Sparkles className="h-5 w-5" />
-                  온보딩 시작하기 (일정 & 메모 가이드)
-                  <ArrowRight className="h-4 w-4 ml-auto" />
-                </Button>
-
-                <Button
-                  id="onboarding-skip-btn"
-                  variant="ghost"
-                  className="w-full h-10 rounded-xl text-slate-500 hover:text-slate-300 hover:bg-white/5 text-sm"
-                  onClick={handleSkip}
-                >
-                  나중에 할게요
-                </Button>
               </div>
-            </div>
-          )}
-
-          {/* ── STEP: TEAM-CREATE ──────────────────────────── */}
-          {step === "team-create" && (
-            <div className="px-8 py-8 flex flex-col gap-6">
-              <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-green-500/20 ring-2 ring-green-500/30">
-                  <Users className="h-6 w-6 text-green-400" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-extrabold text-white">팀을 먼저 만들어볼게요</h2>
-                  <p className="mt-0.5 text-sm text-slate-400">
-                    {featureIntent === "schedule" ? "일정" : "메모"}을 쓰려면 팀이 하나 필요해요.<br />
-                    나중에 언제든 이름을 바꾸거나 삭제할 수 있어요.
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="onboarding-team-name" className="text-slate-300 text-sm font-semibold">
-                  팀 이름 <span className="text-slate-500 font-normal">(비워두면 자동 설정)</span>
-                </Label>
-                <Input
-                  id="onboarding-team-name"
-                  placeholder={`${guide?.user_name ?? "내"}의 팀`}
-                  value={teamName}
-                  onChange={(e) => setTeamName(e.target.value)}
-                  className="h-11 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-slate-500 focus:border-primary"
-                  onKeyDown={(e) => { if (e.key === "Enter") handleCreateTeam() }}
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Button
-                  id="onboarding-create-team-btn"
-                  className="w-full h-11 rounded-xl font-bold gap-2"
-                  onClick={handleCreateTeam}
-                  disabled={isCreatingTeam}
-                >
-                  {isCreatingTeam ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" /> 팀 생성 중...</>
-                  ) : (
-                    <><Users className="h-4 w-4" /> 팀 만들고 시작하기 <ArrowRight className="h-4 w-4 ml-auto" /></>
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full h-10 rounded-xl text-slate-500 hover:text-slate-300 hover:bg-white/5 text-sm"
-                  onClick={() => setStep("guide")}
-                  disabled={isCreatingTeam}
-                >
-                  돌아가기
-                </Button>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* ── INTERACTIVE EXPERIENCE OVERLAY ──────────────── */}
+      {showExperience && guide && (
+        <OnboardingExperience 
+          guideData={guide} 
+          onClose={() => {
+            handleSkip()
+          }} 
+        />
+      )}
     </div>
   )
 }

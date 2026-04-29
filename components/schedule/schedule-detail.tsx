@@ -1,105 +1,420 @@
 "use client"
 
-import { Calendar, Clock, Users, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react"
+import React, { useState, useEffect } from "react"
+import { 
+  Calendar, 
+  Clock, 
+  Users, 
+  ArrowLeft, 
+  CheckCircle2, 
+  AlertCircle, 
+  Trash2, 
+  BellPlus, 
+  BellOff, 
+  Loader2, 
+  Sparkles,
+  Settings,
+  Plus,
+  Pencil
+} from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { ScheduleResponse } from "@/services/scheduleService"
+import { Input } from "@/components/ui/input"
+import { scheduleService, ScheduleResponse } from "@/services/scheduleService"
+import { notificationService, NotificationResponse } from "@/services/notificationService"
+import { ScheduleAssigneeManager } from "./schedule-assignee-manager"
+import { cn } from "@/lib/utils"
 
 interface ScheduleDetailProps {
   schedule: ScheduleResponse | null
   onBack: () => void
 }
 
-export function ScheduleDetail({ schedule, onBack }: ScheduleDetailProps) {
+export function ScheduleDetail({ schedule: initialSchedule, onBack }: ScheduleDetailProps) {
+  const [schedule, setSchedule] = useState<ScheduleResponse | null>(initialSchedule)
+  const [reminders, setReminders] = useState<NotificationResponse[]>([])
+  const [newReminder, setNewReminder] = useState("")
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editTitle, setEditTitle] = useState("")
+  const [editDescription, setEditDescription] = useState("")
+  const [editStartTime, setEditStartTime] = useState("")
+  const [editEndTime, setEditEndTime] = useState("")
+
+  useEffect(() => {
+    if (initialSchedule) {
+      fetchData()
+    }
+  }, [initialSchedule?.id])
+
+  const fetchData = async () => {
+    if (!initialSchedule) return
+    try {
+      const [scheduleData, remindersData] = await Promise.all([
+        scheduleService.getSchedule(initialSchedule.id),
+        notificationService.getMyNotifications()
+      ])
+      setSchedule(scheduleData)
+      setEditTitle(scheduleData.title)
+      setEditDescription(scheduleData.description || "")
+      setEditStartTime(toDateTimeLocal(scheduleData.start_time))
+      setEditEndTime(toDateTimeLocal(scheduleData.end_time))
+      setReminders(remindersData.filter(n => n.schedule_id === initialSchedule.id))
+    } catch (err) {
+      console.error("Failed to fetch schedule detail:", err)
+    }
+  }
+
+  const handleDeleteSchedule = async () => {
+    if (!schedule || !confirm("정말로 이 일정을 삭제하시겠습니까?")) return
+    setIsDeleting(true)
+    try {
+      await scheduleService.deleteSchedule(schedule.id)
+      alert("일정이 삭제되었습니다.")
+      onBack()
+    } catch (err: any) {
+      console.error("Delete failed:", err)
+      if (err.response?.status === 403) {
+        alert("게스트 멤버는 일정을 삭제할 권한이 없습니다.")
+      } else {
+        alert("삭제에 실패했습니다.")
+      }
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const handleStatusUpdate = async (nextStatus: string) => {
+    if (!schedule) return
+    setIsUpdating(true)
+    try {
+      const updated = await scheduleService.updateStatus(schedule.id, { status: nextStatus })
+      setSchedule(updated)
+    } catch (err: any) {
+      console.error("Status update failed:", err)
+      if (err.response?.status === 403) {
+        alert("게스트 멤버는 일정 상태를 변경할 권한이 없습니다.")
+      }
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleUpdateSchedule = async () => {
+    if (!schedule || !editTitle.trim()) return
+    setIsUpdating(true)
+    try {
+      const updated = await scheduleService.updateSchedule(schedule.id, {
+        title: editTitle,
+        description: editDescription,
+        start_time: new Date(editStartTime).toISOString(),
+        end_time: editEndTime ? new Date(editEndTime).toISOString() : null
+      })
+      setSchedule(updated)
+      setIsEditMode(false)
+      alert("일정이 수정되었습니다.")
+    } catch (err: any) {
+      console.error("Update failed:", err)
+      if (err.response?.status === 403) {
+        alert("일정 생성자 또는 팀 리더만 수정할 수 있습니다.")
+      } else {
+        alert("일정 수정에 실패했습니다.")
+      }
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleAddReminder = async () => {
+    if (!schedule || !newReminder) return
+    try {
+      const remindAt = new Date(newReminder).toISOString()
+      const created = await notificationService.createNotification({
+        schedule_id: schedule.id,
+        remind_at: remindAt
+      })
+      setReminders((prev: NotificationResponse[]) => [...prev, created])
+      setNewReminder("")
+    } catch (err: any) {
+      console.error("Failed to add reminder:", err)
+      if (err.response?.status === 403) {
+        alert("게스트 멤버는 리마인더를 추가할 권한이 없습니다.")
+      } else {
+        alert("리마인더 추가에 실패했습니다.")
+      }
+    }
+  }
+
+  const handleDeleteReminder = async (id: number) => {
+    try {
+      await notificationService.deleteNotification(id)
+      setReminders((prev: NotificationResponse[]) => prev.filter((r: NotificationResponse) => r.id !== id))
+    } catch (err: any) {
+      console.error("Failed to delete reminder:", err)
+      if (err.response?.status === 403) {
+        alert("게스트 멤버는 리마인더를 삭제할 권한이 없습니다.")
+      } else {
+        alert("리마인더 삭제에 실패했습니다.")
+      }
+    }
+  }
+
   if (!schedule) return null
+
+  const parseISO = (isoString: string | null) => {
+    if (!isoString) return null
+    let normalized = isoString.replace(' ', 'T')
+    if (!normalized.includes('Z') && !normalized.includes('+') && normalized.includes('T')) {
+      normalized += 'Z'
+    }
+    return new Date(normalized)
+  }
 
   const formatDateTime = (isoString: string | null) => {
     if (!isoString) return "-"
-    const date = new Date(isoString)
+    const date = parseISO(isoString)
+    if (!date || isNaN(date.getTime())) return "-"
     return date.toLocaleString('ko-KR', {
       year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit'
+      hour: '2-digit', minute: '2-digit',
+      hour12: false
     })
   }
 
+  const toDateTimeLocal = (isoString: string | null) => {
+    if (!isoString) return ""
+    const date = parseISO(isoString)
+    if (!date || isNaN(date.getTime())) return ""
+    const offset = date.getTimezoneOffset() * 60000
+    return new Date(date.getTime() - offset).toISOString().slice(0, 16)
+  }
+
   return (
-    <div className="p-8 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="p-8 max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
       <Button
         variant="ghost"
         onClick={onBack}
-        className="mb-6 hover:bg-secondary transition-colors"
+        className="mb-8 hover:bg-secondary/50 rounded-xl transition-all group"
       >
-        <ArrowLeft className="mr-2 h-4 w-4" />
+        <ArrowLeft className="mr-2 h-4 w-4 group-hover:-translate-x-1 transition-transform" />
         목록으로 돌아가기
       </Button>
 
-      <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm overflow-hidden rounded-3xl">
-        <div className={`h-2 w-full ${schedule.status === "COMPLETED" ? "bg-muted" : "bg-primary"}`} />
-        <CardHeader className="pb-6 p-8">
-          <div className="flex items-center justify-between mb-4">
-            <Badge
-              variant={schedule.status === "COMPLETED" ? "secondary" : "default"}
-              className="px-4 py-1 text-xs font-bold uppercase tracking-wider rounded-full"
-            >
-              {schedule.status === "COMPLETED" ? (
-                <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> 완료</span>
-              ) : (
-                <span className="flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {schedule.status === "PENDING" ? "대기중" : schedule.status}</span>
-              )}
-            </Badge>
-            <div className="text-sm text-muted-foreground flex items-center gap-2">
+      <Card className="border-none shadow-2xl bg-card/50 backdrop-blur-sm overflow-hidden rounded-[2rem]">
+        <div className={cn(
+          "h-3 w-full transition-colors duration-500",
+          schedule.status === "COMPLETED" ? "bg-emerald-500" : 
+          schedule.status === "IN_PROGRESS" ? "bg-amber-500" : "bg-primary"
+        )} />
+        
+        <CardHeader className="pb-6 p-10">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Badge
+                variant={schedule.status === "COMPLETED" ? "secondary" : "default"}
+                className={cn(
+                  "px-4 py-1 text-xs font-black uppercase tracking-widest rounded-full shadow-sm border",
+                  schedule.status === "COMPLETED" ? "bg-emerald-500/10 text-emerald-600 border-emerald-200" :
+                  schedule.status === "IN_PROGRESS" ? "bg-amber-500/10 text-amber-600 border-amber-200" :
+                  "bg-primary/10 text-primary border-primary/20"
+                )}
+              >
+                {schedule.status === "COMPLETED" ? (
+                  <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5" /> 완료됨</span>
+                ) : schedule.status === "IN_PROGRESS" ? (
+                  <span className="flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5 animate-pulse" /> 진행 중</span>
+                ) : (
+                  <span className="flex items-center gap-1.5"><AlertCircle className="h-3.5 w-3.5" /> 대기중</span>
+                )}
+              </Badge>
+              {isUpdating && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            </div>
+            <div className="text-sm font-bold text-muted-foreground/60 flex items-center gap-2 uppercase tracking-tighter">
               <Calendar className="h-4 w-4" />
-              <span>일정 상세 정보</span>
+              Schedule ID: #{schedule.id}
             </div>
           </div>
-          <CardTitle className="text-4xl font-black tracking-tight text-foreground/90 mb-4">
-            {schedule.title}
-          </CardTitle>
-          <CardDescription className="text-lg leading-relaxed text-foreground/70">
-            {schedule.description || "설명이 없습니다."}
-          </CardDescription>
+          
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex-1">
+              {isEditMode ? (
+                <div className="space-y-4 max-w-3xl">
+                  <Input 
+                    value={editTitle}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditTitle(e.target.value)}
+                    className="text-4xl font-black h-16 rounded-2xl border-2 border-primary/20 focus:border-primary"
+                    placeholder="일정 제목을 입력하세요"
+                  />
+                  <textarea
+                    value={editDescription}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditDescription(e.target.value)}
+                    className="w-full min-h-[120px] p-4 text-lg rounded-2xl border-2 border-primary/10 focus:border-primary/30 outline-none bg-background/50 font-medium"
+                    placeholder="일정 설명을 입력하세요"
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-primary uppercase tracking-widest">Start Time</label>
+                      <Input 
+                        type="datetime-local"
+                        value={editStartTime}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditStartTime(e.target.value)}
+                        className="rounded-xl border-2 border-primary/10 focus:border-primary/30"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">End Time</label>
+                      <Input 
+                        type="datetime-local"
+                        value={editEndTime}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditEndTime(e.target.value)}
+                        className="rounded-xl border-2 border-primary/10 focus:border-primary/30"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={handleUpdateSchedule} 
+                      className="rounded-xl font-bold px-6"
+                      disabled={isUpdating}
+                    >
+                      {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      저장하기
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => {
+                        setIsEditMode(false)
+                        setEditTitle(schedule.title)
+                        setEditDescription(schedule.description || "")
+                        setEditStartTime(toDateTimeLocal(schedule.start_time))
+                        setEditEndTime(toDateTimeLocal(schedule.end_time))
+                      }} 
+                      className="rounded-xl font-bold"
+                    >
+                      취소
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-4 mb-6">
+                    <CardTitle className="text-5xl font-black tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/50 leading-tight">
+                      {schedule.title}
+                    </CardTitle>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="rounded-xl h-10 w-10 border border-border/50 hover:bg-primary/5 hover:text-primary transition-all"
+                      onClick={() => setIsEditMode(true)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <CardDescription className="text-xl leading-relaxed text-muted-foreground font-medium max-w-2xl">
+                    {schedule.description || "이 일정에 대한 상세 설명이 등록되지 않았습니다."}
+                  </CardDescription>
+                </>
+              )}
+            </div>
+          </div>
         </CardHeader>
 
-        <Separator className="mx-8" />
+        <Separator className="mx-10 opacity-50" />
 
-        <CardContent className="p-8 space-y-10">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                <Clock className="h-4 w-4" /> 일정 시간
-              </h3>
-              <div className="bg-muted/30 p-6 rounded-2xl border border-border/50 shadow-inner">
-                <div className="flex flex-col gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">시작일 (start_time)</p>
-                    <p className="text-xl font-bold">{formatDateTime(schedule.start_time)}</p>
+        <CardContent className="p-10 space-y-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            
+            {/* Left Column: Time & Status */}
+            <div className="space-y-10">
+              <div className="space-y-5">
+                <h3 className="text-xs font-black text-muted-foreground/40 uppercase tracking-[0.2em] flex items-center gap-2">
+                  <Clock className="h-4 w-4" /> Timeframe
+                </h3>
+                <div className="bg-muted/20 p-8 rounded-[2rem] border border-border/40 shadow-inner relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                    <Calendar className="h-24 w-24" />
                   </div>
-                  <div className="w-8 h-px bg-border ml-1" />
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">종료일 (end_time)</p>
-                    <p className="text-xl font-bold">{formatDateTime(schedule.end_time)}</p>
+                  <div className="relative z-10 flex flex-col gap-8">
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary" /> Start Time
+                      </p>
+                      <p className="text-2xl font-black text-foreground/90">{formatDateTime(schedule.start_time)}</p>
+                    </div>
+                    <div className="w-12 h-1 bg-gradient-to-r from-primary/40 to-transparent rounded-full" />
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" /> End Time
+                      </p>
+                      <p className="text-2xl font-black text-foreground/80">{formatDateTime(schedule.end_time)}</p>
+                    </div>
                   </div>
+                </div>
+              </div>
+
+              <div className="space-y-5">
+                <h3 className="text-xs font-black text-muted-foreground/40 uppercase tracking-[0.2em] flex items-center gap-2">
+                  <Settings className="h-4 w-4" /> Quick Actions
+                </h3>
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                  <Button 
+                    variant="outline" 
+                    className="rounded-xl h-9 px-4 text-xs font-bold gap-1.5 hover:bg-primary/5 transition-all shadow-sm whitespace-nowrap"
+                    onClick={() => handleStatusUpdate('PENDING')}
+                    disabled={isUpdating || schedule.status === 'PENDING'}
+                  >
+                    대기
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="rounded-xl h-9 px-4 text-xs font-bold gap-1.5 hover:bg-amber-500/5 hover:text-amber-600 hover:border-amber-200 transition-all shadow-sm whitespace-nowrap"
+                    onClick={() => handleStatusUpdate('IN_PROGRESS')}
+                    disabled={isUpdating || schedule.status === 'IN_PROGRESS'}
+                  >
+                    진행중
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="rounded-xl h-9 px-4 text-xs font-bold gap-1.5 hover:bg-emerald-500/5 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm whitespace-nowrap"
+                    onClick={() => handleStatusUpdate('COMPLETED')}
+                    disabled={isUpdating || schedule.status === 'COMPLETED'}
+                  >
+                    완료
+                  </Button>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                <Users className="h-4 w-4" /> 참여자
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary" className="px-3 py-1.5 rounded-lg text-sm font-medium border border-border/50">
-                  담당자 미정 (API 연동 필요)
-                </Badge>
+            {/* Right Column: Assignees */}
+            <div className="space-y-10">
+              <div className="space-y-5">
+                <h3 className="text-xs font-black text-muted-foreground/40 uppercase tracking-[0.2em] flex items-center gap-2">
+                  <Users className="h-4 w-4" /> 담당자 설정
+                </h3>
+                <ScheduleAssigneeManager scheduleId={schedule.id} teamId={schedule.team_id} />
               </div>
             </div>
+
           </div>
 
-          <div className="pt-6 border-t border-border/30 flex justify-end gap-3">
-            <Button variant="outline" className="rounded-xl px-6">수정하기</Button>
-            <Button variant="destructive" className="rounded-xl px-6">삭제하기</Button>
+          <div className="pt-10 border-t border-border/30 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium italic">
+              * 최종 수정: {new Date(schedule.updated_at).toLocaleString()}
+            </div>
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <Button 
+                variant="destructive" 
+                className="flex-1 md:flex-none h-12 px-8 rounded-2xl font-bold gap-2 shadow-lg shadow-destructive/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                onClick={handleDeleteSchedule}
+                disabled={isDeleting}
+              >
+                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                일정 삭제
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

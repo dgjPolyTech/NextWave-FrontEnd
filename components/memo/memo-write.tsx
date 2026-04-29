@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { FileText, Bold, Italic, List, Link, Save, Users } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -20,14 +20,16 @@ import { scheduleService, ScheduleResponse } from "@/services/scheduleService"
 import { teamService, TeamMemberResponse } from "@/services/teamService"
 import { onboardingService } from "@/services/onboardingService"
 import { Sparkles } from "lucide-react"
+import { PAGES, ONBOARDING_STEPS } from "@/lib/constants"
 
 interface MemoWriteProps {
   teamId: number
   onSuccess?: () => void
   onNavigate?: (page: any) => void
+  hideHeader?: boolean
 }
 
-export function MemoWrite({ teamId, onSuccess, onNavigate }: MemoWriteProps) {
+export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }: MemoWriteProps) {
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -42,7 +44,7 @@ export function MemoWrite({ teamId, onSuccess, onNavigate }: MemoWriteProps) {
   // 온보딩 데이터 확인 및 자동 입력
   useEffect(() => {
     const step = onboardingService.getStep()
-    if (step === 'SCHEDULE_COMPLETED') {
+    if (step === ONBOARDING_STEPS.SCHEDULE_COMPLETED) {
       const guide = onboardingService.getGuideData()
       if (guide && guide.guide.example_memo) {
         const ex = guide.guide.example_memo
@@ -61,8 +63,11 @@ export function MemoWrite({ teamId, onSuccess, onNavigate }: MemoWriteProps) {
       try {
         const data = await scheduleService.getTeamSchedules(teamId)
         setSchedules(data)
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to fetch schedules for memo:", err)
+        if (err.response?.status === 403) {
+          alert("게스트 멤버는 스케줄을 조회할 권한이 없습니다.")
+        }
       }
     }
     fetchSchedules()
@@ -74,8 +79,11 @@ export function MemoWrite({ teamId, onSuccess, onNavigate }: MemoWriteProps) {
       try {
         const members = await teamService.getMembers(teamId)
         setTeamMembers(members)
-      } catch (error) {
-        console.error("Failed to fetch team members:", error)
+      } catch (err: any) {
+        console.error("Failed to fetch team members:", err)
+        if (err.response?.status === 403) {
+          alert("게스트 멤버는 팀 멤버 목록을 조회할 권한이 없습니다.")
+        }
       }
     }
     fetchTeamMembers()
@@ -98,20 +106,20 @@ export function MemoWrite({ teamId, onSuccess, onNavigate }: MemoWriteProps) {
       }
 
       await memoService.createMemo(payload)
-      alert("Memo saved!")
+      alert("메모가 저장되었습니다!")
 
       // 온보딩 최종 완료 처리
       if (isOnboarding) {
-        onboardingService.setStep('COMPLETED')
+        onboardingService.setStep(ONBOARDING_STEPS.COMPLETED)
         setIsOnboarding(false)
       }
 
       setFormData({ title: "", content: "", schedule_id: "" })
       setSelectedMentions([])
-      
+
       // 온보딩 중일 경우 대시보드로 이동하여 최종 완료 메시지 노출
       if (isOnboarding && onNavigate) {
-        onNavigate("dashboard")
+        onNavigate(PAGES.DASHBOARD)
       } else if (onSuccess) {
         onSuccess()
       }
@@ -122,9 +130,11 @@ export function MemoWrite({ teamId, onSuccess, onNavigate }: MemoWriteProps) {
         ? detail.map((d: any) => `${d.loc?.join(".")}: ${d.msg}`).join("\n")
         : detail || error.message || "Unknown error"
       if (error.response?.status === 401) {
-        alert("Authentication required. Please login first.")
+        alert("인증이 필요합니다. 다시 로그인해주세요.")
+      } else if (error.response?.status === 403) {
+        alert("게스트 멤버는 메모를 작성할 권한이 없습니다.")
       } else {
-        alert("Error saving memo:\n" + msg)
+        alert("메모 저장 실패: " + msg)
       }
     } finally {
       setIsLoading(false)
@@ -132,21 +142,25 @@ export function MemoWrite({ teamId, onSuccess, onNavigate }: MemoWriteProps) {
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Write Memo</h1>
-        <p className="text-muted-foreground mt-1">Create a new memo</p>
-      </div>
+    <div className={hideHeader ? "" : "p-8"}>
+      {!hideHeader && (
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground">메모 작성</h1>
+          <p className="text-muted-foreground mt-1">새로운 메모를 작성합니다</p>
+        </div>
+      )}
 
-      <Card className="max-w-3xl">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            New Memo
-          </CardTitle>
-          <CardDescription>Enter memo content</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Card className={hideHeader ? "border-0 shadow-none" : "max-w-10xl mx-auto"}>
+        {!hideHeader && (
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              새 메모
+            </CardTitle>
+            <CardDescription>메모 내용을 입력하세요</CardDescription>
+          </CardHeader>
+        )}
+        <CardContent className={hideHeader ? "p-0" : ""}>
           {isOnboarding && (
             <div className="mb-6 p-4 rounded-xl bg-primary/10 border border-primary/20 animate-in fade-in slide-in-from-top-2 duration-500">
               <div className="flex items-start gap-3">
@@ -167,7 +181,7 @@ export function MemoWrite({ teamId, onSuccess, onNavigate }: MemoWriteProps) {
                       variant="ghost"
                       className="h-7 text-xs text-primary hover:text-primary hover:bg-primary/10 p-0"
                       onClick={() => {
-                        onboardingService.setStep('COMPLETED');
+                        onboardingService.setStep(ONBOARDING_STEPS.COMPLETED);
                         setIsOnboarding(false);
                       }}
                     >
@@ -181,26 +195,26 @@ export function MemoWrite({ teamId, onSuccess, onNavigate }: MemoWriteProps) {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-3 gap-4">
               <div className="col-span-2 space-y-2">
-                <Label htmlFor="title">Title</Label>
+                <Label htmlFor="title">제목</Label>
                 <Input
                   id="title"
-                  placeholder="Enter memo title"
+                  placeholder="메모 제목을 입력하세요"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="schedule_id">Link Schedule (Optional)</Label>
+                <Label htmlFor="schedule_id">일정 연결 (선택)</Label>
                 <Select
                   value={formData.schedule_id || "none"}
                   onValueChange={(value) => setFormData({ ...formData, schedule_id: value === "none" ? "" : value })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="None" />
+                    <SelectValue placeholder="없음" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="none">없음</SelectItem>
                     {schedules.map((s) => (
                       <SelectItem key={s.id} value={String(s.id)}>
                         {s.title}
@@ -214,7 +228,7 @@ export function MemoWrite({ teamId, onSuccess, onNavigate }: MemoWriteProps) {
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
-                Mention Users (Optional)
+                사용자 멘션 (선택)
               </Label>
               <div className="border rounded-md p-4 space-y-2 max-h-48 overflow-y-auto">
                 {teamMembers.length > 0 ? (
@@ -241,36 +255,22 @@ export function MemoWrite({ teamId, onSuccess, onNavigate }: MemoWriteProps) {
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-muted-foreground">No team members.</p>
+                  <p className="text-sm text-muted-foreground">팀 멤버가 없습니다.</p>
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Selected users will receive a memo mention notification.
+                선택된 사용자들에게 메모 멘션 알림이 발송됩니다.
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="content">Content</Label>
+              <Label htmlFor="content">내용</Label>
               <div className="border rounded-lg">
-                <div className="flex items-center gap-1 p-2 border-b bg-muted/50">
-                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                    <Bold className="h-4 w-4" />
-                  </Button>
-                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                    <Italic className="h-4 w-4" />
-                  </Button>
-                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                    <List className="h-4 w-4" />
-                  </Button>
-                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                    <Link className="h-4 w-4" />
-                  </Button>
-                </div>
                 <Textarea
                   id="content"
-                  placeholder="Enter memo content..."
+                  placeholder="메모 내용을 입력하세요..."
                   value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, content: e.target.value })}
                   className="border-0 focus-visible:ring-0 min-h-[300px] resize-none"
                 />
               </div>
@@ -279,7 +279,7 @@ export function MemoWrite({ teamId, onSuccess, onNavigate }: MemoWriteProps) {
             <div className="flex justify-end gap-3">
               <Button type="submit" disabled={isLoading}>
                 <Save className="h-4 w-4 mr-2" />
-                {isLoading ? "Saving..." : "Save"}
+                {isLoading ? "저장 중..." : "저장"}
               </Button>
             </div>
           </form>

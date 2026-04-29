@@ -39,6 +39,8 @@ export function TeamCreate({ onSuccess }: TeamCreateProps) {
         : detail || error.message || "알 수 없는 오류"
       if (error.response?.status === 401) {
         alert("인증이 필요합니다. 먼저 로그인해주세요.")
+      } else if (error.response?.status === 403) {
+        alert("게스트 멤버는 팀을 생성할 권한이 없습니다.")
       } else {
         alert("팀 생성 중 오류가 발생했습니다:\n" + msg)
       }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { Calendar, Clock, Users, MoreVertical, Plus } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge"
 import { ScheduleCreateForm } from "./schedule-create"
 import { scheduleService, ScheduleResponse } from "@/services/scheduleService"
 import { onboardingService } from "@/services/onboardingService"
+import { PAGES, ONBOARDING_STEPS } from "@/lib/constants"
 
 interface ScheduleViewProps {
   teamId?: number
@@ -32,7 +33,7 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [schedules, setSchedules] = useState<ScheduleResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [onboardingStep, setOnboardingStep] = useState<string>('IDLE')
+  const [onboardingStep, setOnboardingStep] = useState<string>(ONBOARDING_STEPS.IDLE)
 
   useEffect(() => {
     setOnboardingStep(onboardingService.getStep())
@@ -40,7 +41,7 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
 
   // 온보딩 중 다이얼로그가 열려도 바로 종료하지 않고 유지 (생성 폼에서 처리)
   useEffect(() => {
-    if (isDialogOpen && onboardingStep === 'TEAM_CREATED') {
+    if (isDialogOpen && onboardingStep === ONBOARDING_STEPS.TEAM_CREATED) {
       // 로직 제거
     }
   }, [isDialogOpen, onboardingStep])
@@ -68,16 +69,27 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
     
     // 온보딩 중일 경우 (일정 생성 후) 대시보드로 이동하여 다음 단계(메모) 유도
     const currentStep = onboardingService.getStep()
-    if (currentStep === 'SCHEDULE_COMPLETED' && onNavigate) {
-      onNavigate("dashboard")
+    if (currentStep === ONBOARDING_STEPS.SCHEDULE_COMPLETED && onNavigate) {
+      onNavigate(PAGES.DASHBOARD)
     }
   }
 
+  const parseISO = (isoString: string) => {
+    if (!isoString) return null
+    let normalized = isoString.replace(' ', 'T')
+    if (!normalized.includes('Z') && !normalized.includes('+') && normalized.includes('T')) {
+      normalized += 'Z'
+    }
+    return new Date(normalized)
+  }
+
   const formatDateTime = (isoString: string) => {
-    const date = new Date(isoString)
+    const date = parseISO(isoString)
+    if (!date || isNaN(date.getTime())) return "-"
     return date.toLocaleString('ko-KR', {
       year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit'
+      hour: '2-digit', minute: '2-digit',
+      hour12: false
     })
   }
 
@@ -102,8 +114,8 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
               위의 **일정 생성** 버튼을 눌러 첫 일정을 등록해보세요. AI 추천 내용이 자동으로 채워져 있습니다!
             </p>
             <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => {
-              onboardingService.setStep('COMPLETED');
-              setOnboardingStep('COMPLETED');
+              onboardingService.setStep(ONBOARDING_STEPS.COMPLETED);
+              setOnboardingStep(ONBOARDING_STEPS.COMPLETED);
             }}>건너뛰기</Button>
           </div>
         </div>
@@ -120,15 +132,9 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 border rounded-lg p-1 bg-muted/30">
-            <Button variant="ghost" size="sm" className="h-8">이번 주</Button>
-            <Button variant="ghost" size="sm" className="h-8">이번 달</Button>
-            <Button variant="ghost" size="sm" className="h-8 bg-background shadow-sm">전체</Button>
-          </div>
-
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className={`shadow-md hover:shadow-lg transition-all ${onboardingStep === 'TEAM_CREATED' ? 'ring-4 ring-primary ring-offset-4 animate-pulse relative z-50' : ''}`}>
+              <Button className={`shadow-md hover:shadow-lg transition-all ${onboardingStep === ONBOARDING_STEPS.TEAM_CREATED ? 'ring-4 ring-primary ring-offset-4 animate-pulse relative z-50' : ''}`}>
                 <Plus className="mr-2 h-4 w-4" /> 일정 생성
               </Button>
             </DialogTrigger>
@@ -147,7 +153,7 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
         </div>
       ) : (
         <div className="grid gap-4">
-          {schedules.map((schedule) => (
+          {schedules.map((schedule: ScheduleResponse) => (
             <Card
               key={schedule.id}
               className="hover:shadow-md transition-all group cursor-pointer"
@@ -173,11 +179,11 @@ export function ScheduleView({ teamId, onSelectSchedule, onNavigate }: ScheduleV
                     </Badge>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-32" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuContent align="end" className="w-32" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
                         <DropdownMenuItem>수정</DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive">삭제</DropdownMenuItem>
                         <DropdownMenuItem>공유</DropdownMenuItem>

@@ -2,20 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
-
-export type PageType =
-  | "main"
-  | "dashboard"
-  | "schedule-view"
-  | "memo-write"
-  | "memo-share"
-  | "memo-detail"
-  | "schedule-detail"
-  | "team-create"
-  | "team-invite"
-  | "notification-create"
-  | "notification-rules"
-  | "user-signup"
+import { PAGES, PageType } from "@/lib/constants"
 
 interface NavigationContextType {
   currentPage: PageType
@@ -26,6 +13,11 @@ interface NavigationContextType {
   setSelectedSchedule: (schedule: any) => void
   selectedTeamId: number
   setSelectedTeamId: (teamId: number) => void
+  isNotificationModalOpen: boolean
+  setIsNotificationModalOpen: (open: boolean) => void
+  processedNotificationIds: Set<number>
+  addProcessedId: (id: number) => void
+  navigateToTeam: (teamId: number, page?: PageType) => void
 }
 
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined)
@@ -35,15 +27,40 @@ function NavigationInner({ children }: { children: ReactNode }) {
   const searchParams = useSearchParams()
   const pathname = usePathname()
 
-  const [currentPage, setCurrentPageInternal] = useState<PageType>("main")
+  const [currentPage, setCurrentPageInternal] = useState<PageType>(PAGES.MAIN)
   const [selectedMemo, setSelectedMemo] = useState<any>(null)
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null)
   const [selectedTeamId, setSelectedTeamIdInternal] = useState<number>(0)
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
+  const [processedNotificationIds, setProcessedNotificationIds] = useState<Set<number>>(new Set())
+
+  // 초기 로드 시 localStorage에서 복구
+  useEffect(() => {
+    const saved = localStorage.getItem('processed_notifications')
+    if (saved) {
+      try {
+        const ids = JSON.parse(saved)
+        if (Array.isArray(ids)) {
+          setProcessedNotificationIds(new Set(ids))
+        }
+      } catch (e) {
+        console.error("Failed to load processed notifications", e)
+      }
+    }
+  }, [])
+
+  const addProcessedId = useCallback((id: number) => {
+    setProcessedNotificationIds(prev => {
+      const next = new Set(prev).add(id)
+      localStorage.setItem('processed_notifications', JSON.stringify(Array.from(next)))
+      return next
+    })
+  }, [])
 
   // URL 쿼리 파라미터에서 페이지 및 팀 정보 읽기
   useEffect(() => {
-    const pageParam = searchParams.get("page") as PageType
-    if (pageParam && pageParam !== currentPage) {
+    const pageParam = (searchParams.get("page") as PageType) || PAGES.MAIN
+    if (pageParam !== currentPage) {
       setCurrentPageInternal(pageParam)
     }
     
@@ -72,6 +89,16 @@ function NavigationInner({ children }: { children: ReactNode }) {
     setSelectedTeamIdInternal(teamId)
   }, [pathname, router])
 
+  // 팀 선택 및 페이지 이동 통합 (버벅임 및 이중 클릭 방지)
+  const navigateToTeam = useCallback((teamId: number, page: PageType = PAGES.DASHBOARD) => {
+    const params = new URLSearchParams(window.location.search)
+    params.set("teamId", teamId.toString())
+    params.set("page", page)
+    router.push(`${pathname}?${params.toString()}`)
+    setSelectedTeamIdInternal(teamId)
+    setCurrentPageInternal(page)
+  }, [pathname, router])
+
   return (
     <NavigationContext.Provider value={{
       currentPage,
@@ -81,7 +108,12 @@ function NavigationInner({ children }: { children: ReactNode }) {
       selectedSchedule,
       setSelectedSchedule,
       selectedTeamId,
-      setSelectedTeamId
+      setSelectedTeamId,
+      isNotificationModalOpen,
+      setIsNotificationModalOpen,
+      processedNotificationIds,
+      addProcessedId,
+      navigateToTeam
     }}>
       {children}
     </NavigationContext.Provider>

@@ -33,12 +33,21 @@ export function ScheduleCreateForm({ teamId, onSuccess }: ScheduleCreateFormProp
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([])
   const [isOnboarding, setIsOnboarding] = useState(false)
 
+  const parseISO = (isoString: string | null) => {
+    if (!isoString) return null
+    let normalized = isoString.replace(' ', 'T')
+    if (!normalized.includes('Z') && !normalized.includes('+') && normalized.includes('T')) {
+      normalized += 'Z'
+    }
+    return new Date(normalized)
+  }
+
   // 날짜 포맷 변환 (YYYY-MM-DDThh:mm)
   const formatToDateTimeLocal = (dateStr: string) => {
     if (!dateStr) return ""
     try {
-      const d = new Date(dateStr)
-      if (isNaN(d.getTime())) return ""
+      const d = parseISO(dateStr)
+      if (!d || isNaN(d.getTime())) return ""
       const offset = d.getTimezoneOffset() * 60000
       const localISOTime = new Date(d.getTime() - offset).toISOString().slice(0, 16)
       return localISOTime

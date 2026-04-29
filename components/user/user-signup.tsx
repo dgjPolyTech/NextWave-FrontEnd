@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { userService } from "@/services/userService"
 import { authService } from "@/services/authService"
 import { onboardingService } from "@/services/onboardingService"
-import { OnboardingModal } from "@/components/user/onboarding-modal"
 import { useToast } from "@/components/ui/use-toast"
 import { useNavigation } from "@/hooks/use-navigation"
 
@@ -34,7 +33,6 @@ export function UserSignUp({ onSuccess }: UserSignUpProps) {
         customPurpose: ""
     })
     const [isLoading, setIsLoading] = useState(false)
-    const [showOnboarding, setShowOnboarding] = useState(false)
     const { toast } = useToast()
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -67,16 +65,8 @@ export function UserSignUp({ onSuccess }: UserSignUpProps) {
             try {
                 await authService.login(formData.email, formData.password)
 
-                // 3) 온보딩 완료 여부 확인
-                const me = await userService.getMe()
-                if (!onboardingService.isCompleted(me.id)) {
-                    // 처음 가입 → 온보딩 모달 표시
-                    setShowOnboarding(true)
-                } else {
-                    // 이미 완료된 경우 (재가입 등) → 바로 이동
-                    if (onSuccess) onSuccess()
-                    else setCurrentPage("main")
-                }
+                if (onSuccess) onSuccess()
+                else setCurrentPage("main")
             } catch {
                 // 자동 로그인 실패해도 main으로 이동
                 if (onSuccess) onSuccess()
@@ -112,7 +102,6 @@ export function UserSignUp({ onSuccess }: UserSignUpProps) {
     }
 
     const handleOnboardingComplete = (createdTeamId?: number) => {
-        setShowOnboarding(false)
         if (onSuccess) onSuccess(createdTeamId)
         else setCurrentPage("main")
     }
@@ -345,12 +334,6 @@ export function UserSignUp({ onSuccess }: UserSignUpProps) {
                     </CardContent>
                 </Card>
             </div>
-
-            {/* 온보딩 모달 */}
-            <OnboardingModal
-                isOpen={showOnboarding}
-                onComplete={handleOnboardingComplete}
-            />
-        </>
+            </>
     )
 }

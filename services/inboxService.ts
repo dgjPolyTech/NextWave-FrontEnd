@@ -1,10 +1,12 @@
 import { api } from './api';
 
+export type NotificationType = 'TEAM_INVITE' | 'INVITE_ACCEPTED' | 'INVITE_REJECTED' | 'SCHEDULE_ASSIGN' | 'MEMO_MENTION' | 'COMMENT';
+
 export interface AppNotificationResponse {
     id: number;
     title: string;
     content: string;
-    type: string;
+    type: NotificationType;
     related_id: number | null;
     receiver_id: number;
     sender_id: number | null;

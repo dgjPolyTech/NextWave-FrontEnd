@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { userService, UserResponse } from "@/services/userService"
 import { useNavigation } from "@/hooks/use-navigation"
+import { PAGES } from "@/lib/constants"
 
 export function UserDetail() {
     const { setCurrentPage } = useNavigation()
@@ -72,7 +73,7 @@ export function UserDetail() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => setCurrentPage("main")}
+                            onClick={() => setCurrentPage(PAGES.MAIN)}
                             className="rounded-full hover:bg-muted"
                         >
                             <ArrowLeft className="h-5 w-5" />
@@ -143,7 +144,7 @@ export function UserDetail() {
                     <Button
                         size="lg"
                         className="w-full shadow-lg hover:shadow-xl transition-all font-bold text-base h-12 rounded-xl gap-2"
-                        onClick={() => setCurrentPage("user-update")}
+                        onClick={() => setCurrentPage(PAGES.USER_UPDATE)}
                     >
                         <Edit className="h-4 w-4" />
                         정보 수정

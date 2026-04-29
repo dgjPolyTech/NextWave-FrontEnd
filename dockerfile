@@ -6,6 +6,7 @@ RUN apk update && apk add --no-cache bash
 
 COPY package.json package-lock.json* ./
 RUN npm ci
+RUN npm install --save-dev @types/react @types/node @types/react-dom
 
 COPY . . 
 

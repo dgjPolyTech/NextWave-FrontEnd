@@ -1,31 +1,28 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Calendar,
   FileText,
   Users,
   Bell,
   Home,
-  ChevronDown,
   PanelLeft,
-  Menu,
-  Sparkles
+  Sparkles,
+  User as UserIcon
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { PageType } from "@/hooks/use-navigation"
+import { useNavigation } from "@/hooks/use-navigation"
+import { PageType, PAGES } from "@/lib/constants"
 import { Button } from "@/components/ui/button"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { userService, UserResponse } from "@/services/userService"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface AppSidebarProps {
   currentPage: PageType
@@ -33,9 +30,29 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
+  const { setIsNotificationModalOpen } = useNavigation()
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [user, setUser] = useState<UserResponse | null>(null)
 
   const toggleSidebar = () => setIsCollapsed(!isCollapsed)
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const data = await userService.getMe()
+        setUser(data)
+      } catch (err) {
+        console.error("Failed to fetch user for sidebar:", err)
+      }
+    }
+    fetchUser()
+  }, [])
+
+  const getProfileImageUrl = (path: string | null | undefined) => {
+    if (!path) return null
+    if (path.startsWith('http')) return path
+    return `${process.env.NEXT_PUBLIC_API_URL || ''}${path}`
+  }
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -61,7 +78,7 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
             "p-6 flex items-center gap-3 border-b border-sidebar-border overflow-hidden whitespace-nowrap cursor-pointer hover:bg-sidebar-accent transition-colors",
             isCollapsed && "p-4 justify-center"
           )}
-          onClick={() => onNavigate("main")}
+          onClick={() => onNavigate(PAGES.MAIN)}
         >
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg">
             <Sparkles className="h-6 w-6" />
@@ -79,51 +96,57 @@ export function AppSidebar({ currentPage, onNavigate }: AppSidebarProps) {
           <SidebarNavItem
             icon={Home}
             label="대시보드"
-            isActive={currentPage === "dashboard"}
-            onClick={() => onNavigate("dashboard")}
+            isActive={currentPage === PAGES.DASHBOARD}
+            onClick={() => onNavigate(PAGES.DASHBOARD)}
             isCollapsed={isCollapsed}
           />
 
           <SidebarNavItem
             icon={Calendar}
             label="일정 관리"
-            isActive={currentPage === "schedule-view"}
-            onClick={() => onNavigate("schedule-view")}
+            isActive={currentPage === PAGES.SCHEDULE_VIEW}
+            onClick={() => onNavigate(PAGES.SCHEDULE_VIEW)}
             isCollapsed={isCollapsed}
           />
 
-          <SidebarCollapsibleItem
+          <SidebarNavItem
             icon={FileText}
             label="협업 메모"
+            isActive={currentPage === PAGES.MEMO_SHARE || currentPage === PAGES.MEMO_DETAIL || currentPage === PAGES.MEMO_WRITE}
+            onClick={() => onNavigate(PAGES.MEMO_SHARE)}
             isCollapsed={isCollapsed}
-            items={[
-              { label: "메모 작성", active: currentPage === "memo-write", onClick: () => onNavigate("memo-write") },
-              { label: "메모 공유", active: currentPage === "memo-share", onClick: () => onNavigate("memo-share") },
-            ]}
           />
 
-          <SidebarCollapsibleItem
+          <SidebarNavItem
             icon={Users}
-            label="팀 협업"
+            label="팀 관리"
+            isActive={currentPage === PAGES.TEAM_MANAGE}
+            onClick={() => onNavigate(PAGES.TEAM_MANAGE)}
             isCollapsed={isCollapsed}
-            items={[
-              // { label: "팀 생성", active: currentPage === "team-create", onClick: () => onNavigate("team-create") },
-              { label: "팀 초대", active: currentPage === "team-invite", onClick: () => onNavigate("team-invite") },
-              { label: "알림 설정", active: currentPage === "notification-rules", onClick: () => onNavigate("notification-rules") },
-            ]}
+          />
+
+          <SidebarNavItem
+            icon={Bell}
+            label="알림함"
+            isActive={false}
+            onClick={() => setIsNotificationModalOpen(true)}
+            isCollapsed={isCollapsed}
           />
         </nav>
 
         {/* Footer */}
         <div className={cn("p-4 border-t border-sidebar-border overflow-hidden", isCollapsed && "p-2")}>
           <div className={cn("flex items-center gap-3", isCollapsed && "justify-center")}>
-            <div className="w-10 h-10 shrink-0 rounded-full bg-sidebar-accent flex items-center justify-center text-sidebar-foreground text-sm font-bold border-2 border-primary/20">
-              U
-            </div>
+            <Avatar className="w-10 h-10 shrink-0 border-2 border-primary/20">
+              {user?.image_path && <AvatarImage src={getProfileImageUrl(user.image_path)} />}
+              <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground text-sm font-bold">
+                {user?.username ? user.username.charAt(0).toUpperCase() : <UserIcon className="h-5 w-5" />}
+              </AvatarFallback>
+            </Avatar>
             {!isCollapsed && (
               <div className="min-w-0 transition-opacity duration-300">
-                <p className="text-sm font-semibold truncate">사용자</p>
-                <p className="text-xs text-sidebar-foreground/60 truncate">user@example.com</p>
+                <p className="text-sm font-semibold truncate">{user?.username || "사용자"}</p>
+                <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email || "loading..."}</p>
               </div>
             )}
           </div>
@@ -164,60 +187,3 @@ function SidebarNavItem({ icon: Icon, label, isActive, onClick, isCollapsed }: a
 
   return content
 }
-
-function SidebarCollapsibleItem({ icon: Icon, label, items, isCollapsed }: any) {
-  const [isOpen, setIsOpen] = useState(false)
-
-  if (isCollapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            className="w-full h-10 w-10 mx-auto justify-center p-0 text-sidebar-foreground opacity-80 hover:opacity-100 hover:bg-sidebar-accent"
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            <Icon className="h-5 w-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="right">
-          {label}
-        </TooltipContent>
-      </Tooltip>
-    )
-  }
-
-  return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <CollapsibleTrigger asChild>
-        <Button
-          variant="ghost"
-          className="w-full justify-between text-sidebar-foreground opacity-80 hover:opacity-100 hover:bg-sidebar-accent px-3"
-        >
-          <span className="flex items-center gap-3">
-            <Icon className="h-5 w-5" />
-            <span className="truncate">{label}</span>
-          </span>
-          <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
-        </Button>
-      </CollapsibleTrigger>
-      <CollapsibleContent className="pl-11 space-y-1 mt-1 transition-all">
-        {items.map((item: any, idx: number) => (
-          <Button
-            key={idx}
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "w-full justify-start text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors",
-              item.active && "text-sidebar-foreground font-medium bg-sidebar-accent/50"
-            )}
-            onClick={item.onClick}
-          >
-            {item.label}
-          </Button>
-        ))}
-      </CollapsibleContent>
-    </Collapsible>
-  )
-}
-

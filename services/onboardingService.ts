@@ -1,4 +1,5 @@
 import { api } from './api';
+import { STORAGE_KEYS, ONBOARDING_STEPS, OnboardingStepType } from '@/lib/constants';
 
 export interface OnboardingSchedule {
     title: string;
@@ -23,12 +24,8 @@ export interface OnboardingResponse {
 }
 
 const ONBOARDING_DONE_PREFIX = 'onboarding_completed_';
-const ONBOARDING_TEAM_KEY = 'onboarding_team';
-const ONBOARDING_STEP_KEY = 'onboarding_step';
-const ONBOARDING_GUIDE_KEY = 'onboarding_guide';
-const ONBOARDING_FINAL_MESSAGE_KEY = 'onboarding_final_message_shown';
 
-export type OnboardingStep = 'IDLE' | 'TEAM_CREATED' | 'SCHEDULE_COMPLETED' | 'COMPLETED';
+export type OnboardingStep = OnboardingStepType;
 
 export const onboardingService = {
     getGuide: async (): Promise<OnboardingResponse> => {
@@ -51,13 +48,13 @@ export const onboardingService = {
     /** 온보딩 중 생성된 팀 정보 저장 */
     saveOnboardingTeam: (teamId: number, teamName: string): void => {
         if (typeof window === 'undefined') return;
-        localStorage.setItem(ONBOARDING_TEAM_KEY, JSON.stringify({ teamId, teamName }));
+        localStorage.setItem(STORAGE_KEYS.ONBOARDING_TEAM, JSON.stringify({ teamId, teamName }));
     },
 
     /** 온보딩 팀 정보 가져오기 */
     getOnboardingTeam: (): { teamId: number; teamName: string } | null => {
         if (typeof window === 'undefined') return null;
-        const raw = localStorage.getItem(ONBOARDING_TEAM_KEY);
+        const raw = localStorage.getItem(STORAGE_KEYS.ONBOARDING_TEAM);
         if (!raw) return null;
         try {
             return JSON.parse(raw);
@@ -69,31 +66,31 @@ export const onboardingService = {
     /** 온보딩 팀 정보 삭제 */
     clearOnboardingTeam: (): void => {
         if (typeof window === 'undefined') return;
-        localStorage.removeItem(ONBOARDING_TEAM_KEY);
+        localStorage.removeItem(STORAGE_KEYS.ONBOARDING_TEAM);
     },
 
     /** 현재 온보딩 단계 가져오기 */
     getStep: (): OnboardingStep => {
-        if (typeof window === 'undefined') return 'IDLE';
-        return (localStorage.getItem(ONBOARDING_STEP_KEY) as OnboardingStep) || 'IDLE';
+        if (typeof window === 'undefined') return ONBOARDING_STEPS.IDLE;
+        return (localStorage.getItem(STORAGE_KEYS.ONBOARDING_STEP) as OnboardingStep) || ONBOARDING_STEPS.IDLE;
     },
 
     /** 온보딩 단계 설정 */
     setStep: (step: OnboardingStep): void => {
         if (typeof window === 'undefined') return;
-        localStorage.setItem(ONBOARDING_STEP_KEY, step);
+        localStorage.setItem(STORAGE_KEYS.ONBOARDING_STEP, step);
     },
 
     /** 가이드 데이터 저장 */
     saveGuide: (guide: OnboardingResponse): void => {
         if (typeof window === 'undefined') return;
-        localStorage.setItem(ONBOARDING_GUIDE_KEY, JSON.stringify(guide));
+        localStorage.setItem(STORAGE_KEYS.ONBOARDING_GUIDE, JSON.stringify(guide));
     },
 
     /** 저장된 가이드 데이터 가져오기 */
     getGuideData: (): OnboardingResponse | null => {
         if (typeof window === 'undefined') return null;
-        const raw = localStorage.getItem(ONBOARDING_GUIDE_KEY);
+        const raw = localStorage.getItem(STORAGE_KEYS.ONBOARDING_GUIDE);
         if (!raw) return null;
         try {
             return JSON.parse(raw);
@@ -105,12 +102,12 @@ export const onboardingService = {
     /** 최종 완료 메시지 표시 여부 */
     isFinalMessageShown: (): boolean => {
         if (typeof window === 'undefined') return false;
-        return !!localStorage.getItem(ONBOARDING_FINAL_MESSAGE_KEY);
+        return !!localStorage.getItem(STORAGE_KEYS.ONBOARDING_FINAL_MESSAGE);
     },
 
     /** 최종 완료 메시지 표시 완료 저장 */
     markFinalMessageShown: (): void => {
         if (typeof window === 'undefined') return;
-        localStorage.setItem(ONBOARDING_FINAL_MESSAGE_KEY, '1');
+        localStorage.setItem(STORAGE_KEYS.ONBOARDING_FINAL_MESSAGE, '1');
     },
 };

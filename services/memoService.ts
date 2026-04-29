@@ -23,6 +23,7 @@ export interface MemoResponse {
     author_name: string;
     team_id: number;
     schedule_id: number | null;
+    schedule_title: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -52,8 +53,8 @@ export interface CommentCreate {
 }
 
 export const memoService = {
-    createMemo: async (data: MemoCreate): Promise<MemoResponse> => {
-        const response = await api.post<MemoResponse>('/api/v1/memos/', data);
+    createMemo: async (data: MemoCreate): Promise<MemoDetailResponse> => {
+        const response = await api.post<MemoDetailResponse>('/api/v1/memos/', data);
         return response.data;
     },
     
@@ -62,8 +63,8 @@ export const memoService = {
         return response.data;
     },
     
-    updateMemo: async (memoId: number, data: MemoUpdate): Promise<MemoResponse> => {
-        const response = await api.put<MemoResponse>(`/api/v1/memos/${memoId}`, data);
+    updateMemo: async (memoId: number, data: MemoUpdate): Promise<MemoDetailResponse> => {
+        const response = await api.put<MemoDetailResponse>(`/api/v1/memos/${memoId}`, data);
         return response.data;
     },
     

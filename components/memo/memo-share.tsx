@@ -13,8 +13,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react"
 import { memoService, MemoResponse } from "@/services/memoService"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { MemoWrite } from "./memo-write"
 
 interface MemoShareProps {
   teamId: number
@@ -27,20 +36,22 @@ export function MemoShare({ teamId, onViewMemo }: MemoShareProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
   const [authorFilter, setAuthorFilter] = useState("all")
+  const [isWriteModalOpen, setIsWriteModalOpen] = useState(false)
   const itemsPerPage = 10
 
-  useEffect(() => {
-    const fetchMemos = async () => {
-      setIsLoading(true)
-      try {
-        const data = await memoService.getTeamMemos(teamId)
-        setMemos(data)
-      } catch (err) {
-        console.error("Failed to fetch memos:", err)
-      } finally {
-        setIsLoading(false)
-      }
+  const fetchMemos = async () => {
+    setIsLoading(true)
+    try {
+      const data = await memoService.getTeamMemos(teamId)
+      setMemos(data)
+    } catch (err) {
+      console.error("Failed to fetch memos:", err)
+    } finally {
+      setIsLoading(false)
     }
+  }
+
+  useEffect(() => {
     fetchMemos()
   }, [teamId])
 
@@ -84,6 +95,33 @@ export function MemoShare({ teamId, onViewMemo }: MemoShareProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <Dialog open={isWriteModalOpen} onOpenChange={setIsWriteModalOpen}>
+            <DialogTrigger asChild>
+              <Button className="h-9 gap-2 shadow-md hover:shadow-lg transition-all">
+                <Plus className="h-4 w-4" />
+                메모 생성
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-10xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>새 메모 작성</DialogTitle>
+                <DialogDescription>
+                  팀원들과 공유할 메모 내용을 입력하세요.
+                </DialogDescription>
+              </DialogHeader>
+              <MemoWrite
+                teamId={teamId}
+                hideHeader={true}
+                onSuccess={() => {
+                  setIsWriteModalOpen(false);
+                  fetchMemos();
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+
+          <div className="h-6 w-px bg-border mx-1 hidden md:block" />
+
           <div className="flex items-center gap-2">
             <Label htmlFor="author-filter" className="sr-only">작성자 필터</Label>
             <Select value={authorFilter} onValueChange={(value) => { setAuthorFilter(value); setCurrentPage(1); }}>
@@ -122,47 +160,45 @@ export function MemoShare({ teamId, onViewMemo }: MemoShareProps) {
         <div className="flex flex-col gap-4">
           {paginatedMemos.length > 0 ? (
             paginatedMemos.map((memo) => (
-              <Card key={memo.id} className="hover:shadow-md transition-shadow">
+              <Card
+                key={memo.id}
+                className="hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-primary/20 hover:border-l-primary"
+                onClick={() => onViewMemo?.(memo)}
+              >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-secondary">
-                        <FileText className="h-4 w-4 text-secondary-foreground" />
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <FileText className="h-4 w-4 text-primary" />
                       </div>
                       <div>
-                        <CardTitle className="text-base">{memo.title}</CardTitle>
+                        <CardTitle className="text-base group-hover:text-primary transition-colors">
+                          {memo.title}
+                        </CardTitle>
                         <CardDescription className="line-clamp-1">
                           {memo.content || "내용 없음"}
                         </CardDescription>
                       </div>
                     </div>
-                    {memo.schedule_id && (
-                      <Badge variant="outline">일정 연결됨</Badge>
+                    {memo.schedule_title && (
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-none">
+                        <Clock className="h-3 w-3 mr-1" />
+                        {memo.schedule_title}
+                      </Badge>
                     )}
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-muted/50">
                         <User className="h-3 w-3" />
-                        <span>{memo.author_name}</span>
+                        <span className="font-medium">{memo.author_name}</span>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         <Clock className="h-3 w-3" />
                         <span>{formatDate(memo.created_at)}</span>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 gap-1"
-                        onClick={() => onViewMemo?.(memo)}
-                      >
-                        <Eye className="h-4 w-4" />
-                        자세히 보기
-                      </Button>
                     </div>
                   </div>
                 </CardContent>
