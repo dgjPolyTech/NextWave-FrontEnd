@@ -102,20 +102,20 @@ export function MemoShare({ teamId, onViewMemo }: MemoShareProps) {
                 메모 생성
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-10xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>새 메모 작성</DialogTitle>
                 <DialogDescription>
                   팀원들과 공유할 메모 내용을 입력하세요.
                 </DialogDescription>
               </DialogHeader>
-              <MemoWrite 
-                teamId={teamId} 
-                hideHeader={true} 
+              <MemoWrite
+                teamId={teamId}
+                hideHeader={true}
                 onSuccess={() => {
                   setIsWriteModalOpen(false);
                   fetchMemos();
-                }} 
+                }}
               />
             </DialogContent>
           </Dialog>
@@ -160,8 +160,8 @@ export function MemoShare({ teamId, onViewMemo }: MemoShareProps) {
         <div className="flex flex-col gap-4">
           {paginatedMemos.length > 0 ? (
             paginatedMemos.map((memo) => (
-              <Card 
-                key={memo.id} 
+              <Card
+                key={memo.id}
                 className="hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-primary/20 hover:border-l-primary"
                 onClick={() => onViewMemo?.(memo)}
               >

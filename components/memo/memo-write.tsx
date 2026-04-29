@@ -110,7 +110,7 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
 
       setFormData({ title: "", content: "", schedule_id: "" })
       setSelectedMentions([])
-      
+
       // 온보딩 중일 경우 대시보드로 이동하여 최종 완료 메시지 노출
       if (isOnboarding && onNavigate) {
         onNavigate(PAGES.DASHBOARD)
@@ -142,7 +142,7 @@ export function MemoWrite({ teamId, onSuccess, onNavigate, hideHeader = false }:
         </div>
       )}
 
-      <Card className={hideHeader ? "border-0 shadow-none" : "max-w-3xl"}>
+      <Card className={hideHeader ? "border-0 shadow-none" : "max-w-10xl mx-auto"}>
         {!hideHeader && (
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
