@@ -380,7 +380,7 @@ export function TeamManage({ teamId }: TeamManageProps) {
                       </Avatar>
                       <div>
                         <p className="text-sm font-semibold">{member.user_name}</p>
-                        <p className="text-xs text-muted-foreground">#{member.user_id}</p>
+                        <p className="text-xs text-muted-foreground">{member.user_email}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
