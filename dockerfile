@@ -1,17 +1,28 @@
-FROM node:22-alpine
-
+# 1. 빌드
+FROM node:22-alpine AS builder
 WORKDIR /workspace
-
-RUN apk update && apk add --no-cache bash
-
 COPY package.json package-lock.json* ./
 RUN npm ci
-RUN npm install --save-dev @types/react @types/node @types/react-dom
+COPY . .
 
-COPY . . 
-
+# Next.js
 RUN npm run build
 
-EXPOSE 3000
+# 2. 실행 
+FROM node:22-alpine AS runner
+WORKDIR /workspace
 
+# production 환경 설정
+ENV NODE_ENV=production
+
+# 필요한 파일만 복사
+COPY --from=builder /workspace/next.config.mjs ./
+COPY --from=builder /workspace/public ./public
+COPY --from=builder /workspace/.next ./.next
+COPY --from=builder /workspace/package.json ./
+COPY --from=builder /workspace/node_modules ./node_modules
+
+USER node
+
+EXPOSE 3000
 CMD ["npm", "run", "start"]
